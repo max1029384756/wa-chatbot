@@ -3,13 +3,13 @@ import { OpenAI } from 'openai';
 import { UserContextService } from 'src/user-context/user-context.service';
 
 @Injectable()
-export class OpenaiService {
+export class AiService {
   constructor(private readonly context: UserContextService) {}
 
   private readonly openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
-  private readonly logger = new Logger(OpenaiService.name);
+  private readonly logger = new Logger(AiService.name);
 
   async generateAIResponse(userID: string, userInput: string) {
     try {
@@ -46,7 +46,7 @@ export class OpenaiService {
 
       const response = await this.openai.chat.completions.create({
         messages: [{ role: 'system', content: systemPrompt }, ...userContext],
-        model: process.env.OPENAI_MODEL || 'gpt-4o-2024-05-13',
+        model: process.env.OPENAI_MODEL || 'gpt-4.1-mini', //'gpt-4o-2024-05-13',
       });
 
       const aiResponse = response.choices[0].message.content;

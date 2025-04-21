@@ -15,9 +15,7 @@ export class AudioService {
 
   private readonly logger = new Logger(AudioService.name);
 
-  async convertAudioToText(
-    filePath: string,
-  ): Promise<{ status: 'error' | 'success'; data: string }> {
+  async convertAudioToText(filePath: string): Promise<{ status: 'error' | 'success'; data: string }> {
     try {
       const response = await this.openai.audio.transcriptions.create({
         model: 'Systran/faster-whisper-small',

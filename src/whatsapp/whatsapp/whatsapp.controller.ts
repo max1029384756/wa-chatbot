@@ -1,19 +1,21 @@
-import { Body, Controller, Get, HttpCode, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Req, Logger } from '@nestjs/common';
 import { Request } from 'express';
 
 import * as process from 'node:process';
 import { WhatsappService } from './whatsapp.service';
 import { AudioService } from 'src/audio/audio.service';
 import { StabilityaiService } from 'src/stabilityai/stabilityai.service';
-import { OpenaiService } from 'src/openai/openai.service';
+import { AiService } from 'src/ai/ai.service';
 
 @Controller('whatsapp')
 export class WhatsappController {
+  private readonly logger = new Logger(WhatsappController.name);
+
   constructor(
     private readonly whatsAppService: WhatsappService,
     private readonly stabilityaiService: StabilityaiService,
     private readonly audioService: AudioService,
-    private readonly openaiService: OpenaiService,
+    private readonly aiService: AiService,
   ) {}
 
   @Get('webhook')
@@ -22,8 +24,7 @@ export class WhatsappController {
     const challenge = request.query['hub.challenge'];
     const token = request.query['hub.verify_token'];
 
-    const verificationToken =
-      process.env.WHATSAPP_CLOUD_API_WEBHOOK_VERIFICATION_TOKEN;
+    const verificationToken = process.env.WHATSAPP_CLOUD_API_WEBHOOK_VERIFICATION_TOKEN;
 
     if (!mode || !token) {
       return 'Error verifying token';
@@ -41,6 +42,8 @@ export class WhatsappController {
     if (!messages) return;
 
     const message = messages[0];
+    this.logger.log('message:', message);
+
     const messageSender = message.from;
     const messageID = message.id;
 
@@ -49,27 +52,17 @@ export class WhatsappController {
     switch (message.type) {
       case 'text':
         const text = message.text.body;
-        const imageGenerationCommand = '/imagine';
-        if (text.toLowerCase().includes(imageGenerationCommand)) {
-          const response = await this.stabilityaiService.textToImage(
-            text.replaceAll(imageGenerationCommand, ''),
-          );
+        // const imageGenerationCommand = '/imagine';
+        // if (text.toLowerCase().includes(imageGenerationCommand)) {
+        //   const response = await this.stabilityaiService.textToImage(text.replaceAll(imageGenerationCommand, ''));
 
-          if (Array.isArray(response)) {
-            await this.whatsAppService.sendImageByUrl(
-              messageSender,
-              response[0],
-              messageID,
-            );
-          }
-          return;
-        }
+        //   if (Array.isArray(response)) {
+        //     await this.whatsAppService.sendImageByUrl(messageSender, response[0], messageID);
+        //   }
+        //   return;
+        // }
 
-        await this.whatsAppService.sendWhatsAppMessage(
-          messageSender,
-          text,
-          messageID,
-        );
+        await this.whatsAppService.sendWhatsAppMessage(messageSender, text, messageID);
         break;
       case 'audio':
         const audioID = message.audio.id;
@@ -78,30 +71,21 @@ export class WhatsappController {
           return;
         }
 
-        const transcribedSpeech = await this.audioService.convertAudioToText(
-          response.data,
-        );
+        const transcribedSpeech = await this.audioService.convertAudioToText(response.data);
 
         if (transcribedSpeech.status === 'error') {
           return;
         }
 
-        const aiResponse = await this.openaiService.generateAIResponse(
-          messageSender,
-          transcribedSpeech.data,
-        );
+        const aiResponse = await this.aiService.generateAIResponse(messageSender, transcribedSpeech.data);
 
-        const textToSpeech =
-          await this.audioService.convertTextToSpeech(aiResponse);
+        const textToSpeech = await this.audioService.convertTextToSpeech(aiResponse);
 
         if (textToSpeech.status === 'error') {
           return;
         }
 
-        await this.whatsAppService.sendAudioByUrl(
-          messageSender,
-          textToSpeech.data,
-        );
+        await this.whatsAppService.sendAudioByUrl(messageSender, textToSpeech.data);
     }
 
     return 'Message processed';

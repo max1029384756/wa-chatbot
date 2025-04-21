@@ -4,7 +4,11 @@ import * as crypto from 'crypto';
 
 @Injectable()
 export class UserContextService {
-  private readonly redis: Redis = new Redis(process.env.REDIS_URL || '');
+  private readonly redis: Redis = new Redis({
+    host: process.env.REDIS_URL || 'localhost',
+    port: Number(process.env.REDIS_PORT) || 6379,
+    password: process.env.REDIS_PASSWORD,
+  });
   private readonly logger: Logger = new Logger(UserContextService.name);
   private readonly salt = process.env.HASHING_SALT;
   private readonly contextExpirationTime = 10800; // Expiration Time In Seconds
@@ -12,18 +16,11 @@ export class UserContextService {
   // Phone Numbers shouldn't be said as plain text values
   // in the DB
   hashPhoneNumber(phoneNumber: string) {
-    const hashedPhoneNumber = crypto
-      .createHmac('sha256', this.salt)
-      .update(phoneNumber)
-      .digest('hex');
+    const hashedPhoneNumber = crypto.createHmac('sha256', this.salt).update(phoneNumber).digest('hex');
     return hashedPhoneNumber;
   }
 
-  async saveToContext(
-    context: string,
-    contextType: 'user' | 'assistant',
-    userID: string,
-  ) {
+  async saveToContext(context: string, contextType: 'user' | 'assistant', userID: string) {
     try {
       const value = JSON.stringify({
         role: contextType,
@@ -40,11 +37,7 @@ export class UserContextService {
     }
   }
 
-  async saveAndFetchContext(
-    context: string,
-    contextType: 'user' | 'assistant',
-    userID: string,
-  ) {
+  async saveAndFetchContext(context: string, contextType: 'user' | 'assistant', userID: string) {
     try {
       const pipeline = this.redis.pipeline();
       const value = JSON.stringify({

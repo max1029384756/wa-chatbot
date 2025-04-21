@@ -99,3 +99,6 @@ More features to be added to the chatbot, stay in the loop:
 * [Say Hi On LinkedIn](https://www.linkedin.com/in/tafadzwa-demba/)
 
 **Let's build a smarter and more engaging WhatsApp experience!** 
+
+
+ngrok http 3000  (need vpn)

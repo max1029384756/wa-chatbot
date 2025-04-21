@@ -1,14 +1,14 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { catchError, lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
-import { OpenaiService } from 'src/openai/openai.service';
+import { AiService } from 'src/ai/ai.service';
 import axios, { AxiosRequestConfig } from 'axios';
 import * as path from 'path';
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
 
 @Injectable()
 export class WhatsappService {
-  constructor(private readonly openaiService: OpenaiService) {}
+  constructor(private readonly aiService: AiService) {}
 
   private readonly httpService = new HttpService();
   private readonly logger = new Logger(WhatsappService.name);
@@ -20,20 +20,15 @@ export class WhatsappService {
     },
   };
 
-  async sendWhatsAppMessage(
-    messageSender: string,
-    userInput: string,
-    messageID: string,
-  ) {
-    const aiResponse = await this.openaiService.generateAIResponse(
-      messageSender,
-      userInput,
-    );
+  async sendWhatsAppMessage(messageSender: string, userInput: string, messageID: string) {
+    const aiResponse = await this.aiService.generateAIResponse(messageSender, userInput);
+
+    console.log('aiResponse: ', aiResponse);
 
     const data = JSON.stringify({
       messaging_product: 'whatsapp',
       recipient_type: 'individual',
-      to: messageSender,
+      to: '789226360023', //messageSender,
       context: {
         message_id: messageID,
       },
@@ -55,9 +50,7 @@ export class WhatsappService {
         .pipe(
           catchError((error) => {
             this.logger.error(error);
-            throw new BadRequestException(
-              'Error Posting To WhatsApp Cloud API',
-            );
+            throw new BadRequestException('Error Posting To WhatsApp Cloud API');
           }),
         );
 
@@ -69,9 +62,7 @@ export class WhatsappService {
     }
   }
 
-  async getMediaUrl(
-    mediaID: string,
-  ): Promise<{ status: 'error' | 'success'; data: string }> {
+  async getMediaUrl(mediaID: string): Promise<{ status: 'error' | 'success'; data: string }> {
     const url = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${mediaID}`;
     try {
       const response = await axios.get(url, this.config);
@@ -122,11 +113,7 @@ export class WhatsappService {
     }
   }
 
-  async sendImageByUrl(
-    messageSender: string,
-    fileName: string,
-    messageID: string,
-  ) {
+  async sendImageByUrl(messageSender: string, fileName: string, messageID: string) {
     const imageUrl = `${process.env.SERVER_URL}/${fileName}`;
     const data = JSON.stringify({
       messaging_product: 'whatsapp',
@@ -152,9 +139,7 @@ export class WhatsappService {
         .pipe(
           catchError((error) => {
             this.logger.error(error);
-            throw new BadRequestException(
-              'Error Posting To WhatsApp Cloud API',
-            );
+            throw new BadRequestException('Error Posting To WhatsApp Cloud API');
           }),
         );
 
@@ -190,9 +175,7 @@ export class WhatsappService {
         .pipe(
           catchError((error) => {
             this.logger.error(error);
-            throw new BadRequestException(
-              'Error Posting To WhatsApp Cloud API',
-            );
+            throw new BadRequestException('Error Posting To WhatsApp Cloud API');
           }),
         );
 
