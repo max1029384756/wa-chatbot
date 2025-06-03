@@ -100,5 +100,54 @@ More features to be added to the chatbot, stay in the loop:
 
 **Let's build a smarter and more engaging WhatsApp experience!** 
 
+** Run server locally **
+ngrok http 3015  (need vpn)
 
-ngrok http 3000  (need vpn)
+** Waba text msg webhook **
+```json
+{
+   request:
+      {
+  "entry": [
+    {
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "contacts": [
+              {
+                "profile": {
+                  "name": "Max"
+                },
+                "wa_id": "79485221188"
+              }
+            ],
+            "messages": [
+              {
+                "from": "79485221188",
+                "id": "wamid.HBgLNzkzODQwMjEwODcVAgASGCAzNDk4NENGODNFNTgyMDQ4REM5OEJGQzRFMjRGMTFDRAA=",
+                "text": {
+                  "body": "How is going?"
+                },
+                "timestamp": "1748875664",
+                "type": "text"
+              }
+            ],
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "94741442190",
+              "phone_number_id": "709267392266149"
+            }
+          }
+        }
+      ],
+      "id": "600101339185613"
+    }
+  ],
+  "gs_app_id": "564d5cff-2892-46dc-874a-6528d602d2b6",
+  "object": "whatsapp_business_account"
+}
+}
+```
+
++94741442190 Good Story Agent

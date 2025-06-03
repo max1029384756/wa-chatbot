@@ -1,13 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
-import { AppModule } from './app.module';
+import { AppModule } from './modules/app/app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.useStaticAssets(join(__dirname, '..', 'generatedImages'));
   app.useStaticAssets(join(__dirname, '..', 'audioFile'));
-  await app.listen(3000);
+  await app.listen(3015);
 }
 bootstrap();
