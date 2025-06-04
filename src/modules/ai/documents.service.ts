@@ -21,8 +21,8 @@ export class DocumentsService {
 
       for (const file of files) {
         if (path.extname(file).toLowerCase() === '.pdf') {
-          this.logger.log(`Processing file: ${file}`);
-          this.logger.log(`Processing file: ${file.split('.')[0]}`);
+          console.log(`Processing file: ${file}`);
+          console.log(`Processing file: ${file.split('.')[0]}`);
 
           const filePath = path.join(dataFolder, file);
 
@@ -41,7 +41,7 @@ export class DocumentsService {
           const documents = await splitter.splitDocuments(rawDocument);
 
           // Generate embeddings and save in the database
-          this.logger.log('Using Ollama models and local DB');
+          console.log('Using Ollama models and local DB');
           const embeddings = new OllamaEmbeddings({ model: ollamaEmbeddingsModel });
 
           const businessFaissStoreFolder = faissStoreFolder + `_${file.split('.')[0]}`;
@@ -58,9 +58,9 @@ export class DocumentsService {
         }
       }
 
-      this.logger.log('All documents processed successfully.');
+      console.log('All documents processed successfully.');
     } catch (error) {
-      this.logger.error(`Error processing documents: ${error.message}`);
+      console.error(`Error processing documents: ${error.message}`);
       throw new Error('Failed to process documents.');
     }
   }

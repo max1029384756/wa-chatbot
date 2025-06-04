@@ -140,7 +140,7 @@ export class WhatsappService {
     // const aiResponse2 = await this.aiService.generateAIResponse2(waba, to, userInput);
 
     console.log('aiResponse: ', text);
-    // return aiResponse;
+    return text;
     // console.log('aiResponse2: ', aiResponse2);
 
     // const data = JSON.stringify({
