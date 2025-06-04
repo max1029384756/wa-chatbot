@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as TelegramBot from 'node-telegram-bot-api';
+// import * as TelegramBot from 'node-telegram-bot-api';
 import { NotificationPayload, NotificationService } from './interfaces/notification.interface';
 
 @Injectable()
 export class TelegramNotificationService implements NotificationService {
   private readonly logger = new Logger(TelegramNotificationService.name);
-  private readonly bot: TelegramBot;
+  private readonly bot: any; //TelegramBot;
   private readonly managerChatIds: Record<string, string> = {
     'Surf School': 'TELEGRAM_SURF_SCHOOL_MANAGER_ID', // Replace with actual Telegram ID
     'Sports Club': 'TELEGRAM_SPORTS_CLUB_MANAGER_ID',
