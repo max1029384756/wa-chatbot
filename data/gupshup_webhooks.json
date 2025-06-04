@@ -1,0 +1,180 @@
+// когда отправил из песочницы гупшуп сообщение то получило это
+{
+  "entry": [
+    {
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "79693007325",
+              "phone_number_id": "697687606760340"
+            },
+            "statuses": [
+              {
+                "conversation": {
+                  "expiration_timestamp": "1748683440",
+                  "id": "f262b158ea685df9835f77b3967d318d",
+                  "origin": {
+                    "type": "service"
+                  }
+                },
+                "gs_id": "07d47081-661b-4fba-a5b5-992659a79c0e",
+                "id": "84a98dfe-0462-4135-a3e2-5fbf138eb1d9",
+                "meta_msg_id": "wamid.HBgLNzkzODQwMjEwODcVAgARGBIxMUI2Njk4MjhCRTA2ODZCNTYA",
+                "pricing": {
+                  "billable": true,
+                  "category": "service",
+                  "pricing_model": "CBP"
+                },
+                "recipient_id": "79384021087",
+                "status": "sent",
+                "timestamp": "1748596981"
+              }
+            ]
+          }
+        }
+      ],
+      "id": "1225126559054462"
+    }
+  ],
+  "gs_app_id": "7e032b85-1bf0-42ab-859d-dba36bff6b93",
+  "object": "whatsapp_business_account"
+}
+
+// вопрос из ва и ответ
+{
+  "entry": [
+    {
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "contacts": [
+              {
+                "profile": {
+                  "name": "Max"
+                },
+                "wa_id": "79384021087"
+              }
+            ],
+            "messages": [
+              {
+                "from": "79384021087",
+                "id": "wamid.HBgLNzkzODQwMjEwODcVAgASGBQzQTNCN0MyMjdEQjNCN0REM0QwMwA=",
+                "text": {
+                  "body": "Hi there"
+                },
+                "timestamp": "1748607915",
+                "type": "text"
+              }
+            ],
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "79693007325",
+              "phone_number_id": "697687606760340"
+            }
+          }
+        }
+      ],
+      "id": "1225126559054462"
+    }
+  ],
+  "gs_app_id": "7e032b85-1bf0-42ab-859d-dba36bff6b93",
+  "object": "whatsapp_business_account"
+}
+
+[Nest] 29613  - 05/30/2025, 3:25:17 PM   DEBUG [WhatsappController] Received messages:
+[Nest] 29613  - 05/30/2025, 3:25:17 PM   DEBUG [WhatsappController] Object:
+[
+  {
+    "changes": [
+      {
+        "field": "messages",
+        "value": {
+          "contacts": [
+            {
+              "profile": {
+                "name": "Max"
+              },
+              "wa_id": "79384021087"
+            }
+          ],
+          "messages": [
+            {
+              "from": "79384021087",
+              "id": "wamid.HBgLNzkzODQwMjEwODcVAgASGBQzQTNCN0MyMjdEQjNCN0REM0QwMwA=",
+              "text": {
+                "body": "Hi there"
+              },
+              "timestamp": "1748607915",
+              "type": "text"
+            }
+          ],
+          "messaging_product": "whatsapp",
+          "metadata": {
+            "display_phone_number": "79693007325",
+            "phone_number_id": "697687606760340"
+          }
+        }
+      }
+    ],
+    "id": "1225126559054462"
+  }
+]
+
+[Nest] 29613  - 05/30/2025, 3:25:17 PM     LOG [WhatsappService] userId: 79384021087, waba: 1225126559054462
+[Nest] 29613  - 05/30/2025, 3:25:17 PM     LOG [WhatsappService] Hi there
+[Nest] 29613  - 05/30/2025, 3:25:22 PM   ERROR [AiService] Error generating AI response
+[Nest] 29613  - 05/30/2025, 3:25:22 PM   ERROR [AiService] Error: ENOENT: no such file or directory, open '.faiss_undefined/docstore.json'
+aiResponse:  Sorry, I am unable to process your request at the moment.
+Response: {
+  status: 'submitted',
+  messageId: '8bcb89f4-c47c-4e7b-b0ce-6efca37d0593'
+}
+[Nest] 29613  - 05/30/2025, 3:25:25 PM   DEBUG [WhatsappController] Received messages:
+[Nest] 29613  - 05/30/2025, 3:25:25 PM   DEBUG [WhatsappController] Object:
+{
+  "entry": [
+    {
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "79693007325",
+              "phone_number_id": "697687606760340"
+            },
+            "statuses": [
+              {
+                "conversation": {
+                  "expiration_timestamp": "1748683440",
+                  "id": "f262b158ea685df9835f77b3967d318d",
+                  "origin": {
+                    "type": "service"
+                  }
+                },
+                "gs_id": "8bcb89f4-c47c-4e7b-b0ce-6efca37d0593",
+                "id": "1bfaa7d8-0d1e-4fad-bed3-8c2eb0047a98",
+                "meta_msg_id": "wamid.HBgLNzkzODQwMjEwODcVAgARGBJCQkFERTMwREM0QzlCNjFCQTYA",
+                "pricing": {
+                  "billable": true,
+                  "category": "service",
+                  "pricing_model": "CBP"
+                },
+                "recipient_id": "79384021087",
+                "status": "sent",
+                "timestamp": "1748607924"
+              }
+            ]
+          }
+        }
+      ],
+      "id": "1225126559054462"
+    }
+  ],
+  "gs_app_id": "7e032b85-1bf0-42ab-859d-dba36bff6b93",
+  "object": "whatsapp_business_account"
+}

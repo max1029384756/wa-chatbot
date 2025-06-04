@@ -35,7 +35,7 @@ export class AiService {
   private readonly logger = new Logger(AiService.name);
   private readonly questionCategoryToolName = 'get_question_category';
   private readonly model = new ChatOllama({
-    temperature: 0.3, // 0 чтоб без креативности
+    temperature: 0, // 0 чтоб без креативности
     model: ollamaChatModel,
   });
 
