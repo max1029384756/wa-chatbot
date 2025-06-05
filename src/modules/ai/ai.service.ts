@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { UserContextService } from 'src/modules/user-context/user-context.service';
-import { ChatOllama, OllamaEmbeddings } from '@langchain/ollama';
-import { ollamaChatModel, ollamaEmbeddingsModel, faissStoreFolder, COMMANDS } from 'src/constants';
+import { OllamaEmbeddings } from '@langchain/ollama';
+import { ollamaEmbeddingsModel, faissStoreFolder, COMMANDS } from 'src/constants';
 import { FaissStore } from '@langchain/community/vectorstores/faiss';
 import { createStuffDocumentsChain } from 'langchain/chains/combine_documents';
 import { ChatPromptTemplate, PromptTemplate } from '@langchain/core/prompts';
@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { ChatState } from 'src/modules/user-context/interfaces';
 import { MessageContent } from '@langchain/core/messages';
+import { ChatOpenAI } from '@langchain/openai';
 
 import { RedisChatMessageHistory } from '@langchain/community/stores/message/ioredis';
 import { Business, HumanRequest } from '@/modules/ai/interfaces';
@@ -34,10 +35,13 @@ export class AiService {
   // });
   private readonly logger = new Logger(AiService.name);
   private readonly questionCategoryToolName = 'get_question_category';
-  private readonly model = new ChatOllama({
+  private readonly model = new ChatOpenAI({
+    model: 'gpt-3.5-turbo',
+    temperature: 0, // 0 for no creativity
+  }); /* new ChatOllama({
     temperature: 0, // 0 чтоб без креативности
     model: ollamaChatModel,
-  });
+  }); */
 
   private readonly schemaForQuestionCategory = zodToJsonSchema(
     z.object({

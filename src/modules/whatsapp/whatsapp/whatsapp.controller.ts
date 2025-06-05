@@ -55,7 +55,7 @@ export class WhatsappController {
   @HttpCode(200)
   async handleIncomingWhatsappMessage(@Body() request: any) {
     const { messages } = request?.entry?.[0]?.changes?.[0].value ?? {};
-    this.logger.debug('Received request:', request);
+    // this.logger.debug('Received request:', request);
 
     this.logger.debug('Received messages:', messages);
     if (!messages) return 'ok';

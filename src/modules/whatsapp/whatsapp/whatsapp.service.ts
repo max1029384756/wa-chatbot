@@ -19,7 +19,7 @@ export class WhatsappService {
     private readonly userContext: UserContextService,
     private readonly configService: ConfigService,
     @Inject('NotificationService') private readonly notificationService: NotificationService,
-  ) { }
+  ) {}
 
   private readonly httpService = new HttpService();
   private readonly logger = new Logger(WhatsappService.name);
@@ -136,37 +136,8 @@ export class WhatsappService {
   }
 
   private async sendTextMessage(to: string, text: string, messageId: string) {
-    // const aiResponse = await this.aiService.generateAIResponse(waba, to, userInput);
-    // const aiResponse2 = await this.aiService.generateAIResponse2(waba, to, userInput);
-
-    console.log('aiResponse: ', text);
-    return text;
-    // console.log('aiResponse2: ', aiResponse2);
-
-    // const data = JSON.stringify({
-    //   messaging_product: 'whatsapp',
-    //   recipient_type: 'individual',
-    //   to: '789226360023', //'789037087268', //'789226360023', //to, //
-    //   context: {
-    //     message_id: messageId,
-    //   },
-    //   type: 'text',
-    //   text: {
-    //     preview_url: false,
-    //     body: text,
-    //   },
-    // });
-
-    // const data = JSON.stringify({
-    //   channel: 'whatsapp',
-    //   source: '79693007325',
-    //   destination: '79226360023',
-    //   message: {
-    //     type: 'text',
-    //     text: 'hii there',
-    //     previewUrl: false,
-    //   },
-    // });
+    this.logger.log('aiResponse: ', text);
+    // return text;
 
     try {
       const url = 'https://api.gupshup.io/wa/api/v1/msg';
@@ -190,8 +161,7 @@ export class WhatsappService {
         'src.name': process.env.GUPSHUP_APP_NAME,
       });
 
-      console.log('data: ', data);
-
+      // console.log('data: ', data);
 
       try {
         const response = this.httpService
@@ -215,19 +185,7 @@ export class WhatsappService {
           );
 
         const messageStatus = await lastValueFrom(response);
-        this.logger.log('Message Marked As Read. Status:', messageStatus);
-        // const response = await fetch(url, {
-        //   method: 'POST',
-        //   headers,
-        //   body,
-        // });
-
-        // if (!response.ok) {
-        //   throw new Error(`HTTP error! Status: ${response.status}`);
-        // }
-
-        // const result = await response.json();
-        // console.log('Response:', result);
+        this.logger.log('Message Sent. Status:', messageStatus);
       } catch (error) {
         console.error('Error sending message:', error);
       }
