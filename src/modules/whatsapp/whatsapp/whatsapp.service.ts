@@ -70,11 +70,11 @@ export class WhatsappService {
     await this.userContext.setManagerCallState(wabaId, userId, state);
 
     // TODO: exec notification to manager
-    await this.notificationService.sendNotification({
-      chatId: this.configService.get<string>('businessContext')[wabaId].tgNotificationNubmer,
-      userId,
-      message: question,
-    });
+    // await this.notificationService.sendNotification({
+    //   chatId: this.configService.get<string>('businessContext')[wabaId].tgNotificationNubmer,
+    //   userId,
+    //   message: question,
+    // });
     this.logger.debug(`Manager has been notified for ${wabaId} user:${userId}. Question: ${question}`);
 
     const response = `I have called a manager, please wait for their response.`; // TODO возможно нужно попросить позвонить Please wait or call ${this.configService.get<string>('businessContext')[wabaId].phone}`;
@@ -99,15 +99,16 @@ export class WhatsappService {
     //   return this.sendTextMessage(userId, response, messageId);
     // }
 
-    if (messageText.includes(COMMANDS.CALL_HUMAN)) {
-      // return 'ok'
-      return await this.callManager(source, messageSenderId, messageText, messageId);
-    }
+    // if (messageText.includes(COMMANDS.CALL_HUMAN)) {
+    //   // return 'ok'
+    //   return await this.callManager(source, messageSenderId, messageText, messageId);
+    // }
 
     if (await this.aiService.isHumanRequest(messageText)) {
       // TODO доавить кнопку с командой COMMANDS.CALL_HUMAN
       // или проверить возможность добавления команд в вабу
-      const response = `To connect with a human, please enter the command ${COMMANDS.CALL_HUMAN}.`;
+      // const response = `To connect with a human, please enter the command ${COMMANDS.CALL_HUMAN}.`;
+      const response = `You requested to be connected with a manager.\n${this.aiService.callHuman()}`;
 
       return this.sendTextMessage(messageSenderId, response, messageId);
     }

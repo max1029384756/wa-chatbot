@@ -22,7 +22,7 @@ export class DocumentsService {
       for (const file of files) {
         if (path.extname(file).toLowerCase() === '.pdf') {
           console.log(`Processing file: ${file}`);
-          console.log(`Processing file: ${file.split('.')[0]}`);
+          // console.log(`Processing file: ${file.split('.')[0]}`);
 
           const filePath = path.join(dataFolder, file);
 
@@ -30,8 +30,8 @@ export class DocumentsService {
           const loader = new PDFLoader(filePath, { splitPages: false });
           const rawDocument = await loader.load();
           rawDocument[0].metadata.source = file;
-          rawDocument[0].metadata.business =
-            this.configService.get<string>('businessContext')[file.split('.')[0]]?.name; // TODO проверить конфиг или лучше тесты сдделать
+          // rawDocument[0].metadata.business =
+          //   this.configService.get<string>('businessContext')[file.split('.')[0]]?.name; // TODO проверить конфиг или лучше тесты сдделать
 
           // Split the text into smaller chunks
           const splitter = new RecursiveCharacterTextSplitter({
@@ -44,7 +44,7 @@ export class DocumentsService {
           console.log('Using Ollama models and local DB');
           const embeddings = new OllamaEmbeddings({ model: ollamaEmbeddingsModel });
 
-          const businessFaissStoreFolder = faissStoreFolder + `_${file.split('.')[0]}`;
+          const businessFaissStoreFolder = faissStoreFolder;
           const folderExists = await this.checkFolderExists(businessFaissStoreFolder);
 
           if (folderExists) {

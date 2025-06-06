@@ -1,15 +1,10 @@
 export interface Business {
   name: string;
   phone: string;
-}
-
-export interface BusinessContext {
-  accommodation: Business;
-  sports_club: Business;
-  surf_school: Business;
+  type: string;
 }
 
 export enum HumanRequest {
-  YES = 'yes',
-  NO = 'no',
+  TRUE = 'true',
+  FALSE = 'false',
 }
