@@ -7,10 +7,10 @@ import { StabilityaiService } from '../stabilityai/stabilityai.service';
 import { AudioService } from '../audio/audio.service';
 import { UserContextModule } from 'src/modules/user-context/user-context.module';
 import { NotificationModule } from '@/modules/notifications/notifications.module';
-// import { NotificationService } from '@/modules/notifications/notification.service';
+import { MessageHistoryModule } from '@/modules/message-history/message-history.module';
 
 @Module({
-  imports: [UserContextModule, NotificationModule],
+  imports: [UserContextModule, NotificationModule, MessageHistoryModule],
   controllers: [WhatsappController],
   providers: [AiService, WhatsappService, UserContextService, StabilityaiService, AudioService],
 })

@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { catchError, lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { AiService } from '@/modules/ai/ai.service';
@@ -7,10 +7,10 @@ import * as path from 'path';
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { UserContextService } from 'src/modules/user-context/user-context.service';
 import { ConfigService } from '@nestjs/config';
-import { COMMANDS } from '@/constants';
-import { NotificationService } from '@/modules/notifications/interfaces/notification.interface';
+// import { COMMANDS } from '@/constants';
+// import { NotificationService } from '@/modules/notifications/interfaces/notification.interface';
 import { IIncomingMessage } from '@/modules/whatsapp/whatsapp/interfaces/incoming-message.interface';
-// import gupshup from '@api/gupshup';
+import { MessageHistoryService } from '@/modules/message-history/message-history.service';
 
 @Injectable()
 export class WhatsappService {
@@ -18,19 +18,15 @@ export class WhatsappService {
     private readonly aiService: AiService,
     private readonly userContext: UserContextService,
     private readonly configService: ConfigService,
-    @Inject('NotificationService') private readonly notificationService: NotificationService,
+    // @Inject('NotificationService') private readonly notificationService: NotificationService,
+    private readonly messageHistoryService: MessageHistoryService, // Injected service
   ) {}
 
   private readonly httpService = new HttpService();
   private readonly logger = new Logger(WhatsappService.name);
   private readonly url = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${process.env.WHATSAPP_CLOUD_API_PHONE_NUMBER_ID}/messages`;
   private readonly config = {
-    // headers: {
-    //   'Content-Type': 'application/json',
-    //   Authorization: `Bearer ${process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN}`,
-    // },
     headers: {
-      // 'Content-Type': 'application/x-www-form-urlencoded',
       'Content-Type': 'application/json',
       apikey: process.env.GUPSHUP_API_KEY,
     },
@@ -87,6 +83,7 @@ export class WhatsappService {
     const messageText = message.text.body;
     const messageId = message.id;
     const source = process.env.GUPSHUP_SOURCE_NUMBER;
+    const timestamp = message.timestamp;
 
     this.logger.log(`userId: ${messageSenderId}, waba: ${source}`, messageText);
 
@@ -113,27 +110,52 @@ export class WhatsappService {
       return this.sendTextMessage(messageSenderId, response, messageId);
     }
 
+    const start = Date.now();
     const aiResponse = await this.aiService.generateAIResponse(source, messageSenderId, messageText);
+    const end = Date.now();
 
-    /*  старый код с определением темы 
-    const chatHistory = await this.userContext.saveAndFetchContext(messageText, 'user', messageSenderId);
-    // Create state with chat history
-    const state = { messages: chatHistory };
-
-    // Determine the topic
-    const topic = await this.aiService.routeQuestion(state, messageText);
-
-    // Generate an answer
-    const aiResponse = await this.aiService.answerQuestion(state, topic, messageText);
-
-    this.userContext.saveToContext(aiResponse, 'assistant', messageSenderId);
-
-    // Add the assistant's response to the chat history
-    // chatHistory.push({ role: "assistant", content: answer });
-    // await chatHistoryStore.set(messageSenderId, chatHistory);
-    console.log('aiResponse: ', aiResponse); */
+    let date: Date | undefined = undefined;
+    if (timestamp) {
+      const ms = Number(timestamp) * 1000;
+      date = new Date(ms);
+    }
+    await this.messageHistoryService.save({
+      clientId: messageSenderId,
+      question: messageText,
+      answer: aiResponse,
+      generationTime: (end - start) / 1000,
+      ...(date && { date }),
+    });
 
     return this.sendTextMessage(messageSenderId, aiResponse, messageId);
+  }
+
+  async handleTestTextMessage(message: IIncomingMessage) {
+    const messageSenderId = message.from;
+    const messageText = message.text.body;
+    const timestamp = message.timestamp;
+    const source = process.env.GUPSHUP_SOURCE_NUMBER;
+
+    const start = Date.now();
+    const aiResponse = await this.aiService.generateAIResponse(source, messageSenderId, messageText);
+    const end = Date.now();
+
+    let date: Date | undefined = undefined;
+    if (timestamp) {
+      const ms = Number(timestamp) * 1000;
+      date = new Date(ms);
+    }
+    await this.messageHistoryService.save({
+      clientId: messageSenderId,
+      question: messageText,
+      answer: aiResponse,
+      generationTime: (end - start) / 1000,
+      ...(date && { date }),
+    });
+
+    this.logger.log('aiResponse: ', aiResponse);
+
+    return aiResponse;
   }
 
   private async sendTextMessage(to: string, text: string, messageId: string) {
@@ -325,15 +347,6 @@ export class WhatsappService {
     }
   }
   async markMessageAsRead(messageId: string) {
-    // const data = JSON.stringify({
-    //   messaging_product: 'whatsapp',
-    //   status: 'read',
-    //   message_id: messageId,
-    //   typing_indicator: {
-    //     type: 'text',
-    //   },
-    // });
-
     try {
       const response = this.httpService
         .request({
@@ -357,7 +370,7 @@ export class WhatsappService {
       // TODO: эта функция нужна для двух синих галочек прочитанности и печатания
       // понять что с ней делать
       const messageStatus = await lastValueFrom(response);
-      // this.logger.log('Message Marked As Read. Status:', messageStatus);
+      this.logger.log('Message Marked As Read. Status:', messageStatus);
     } catch (error) {
       this.logger.error(error);
       return 'Axle broke!! Abort mission!!';

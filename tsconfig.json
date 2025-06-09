@@ -20,6 +20,10 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "resolveJsonModule": true
-  }
+    "resolveJsonModule": true,
+    "types": [
+      "node"
+    ],
+  },
+  "exclude": ["node_modules", "dist", "test", "**/*.spec.ts"]
 }

@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Redis } from 'ioredis';
-import * as crypto from 'crypto';
+// import * as crypto from 'crypto';
 import { ContextMessage, ManagerStateData } from 'src/modules/user-context/interfaces';
 import { MessageContent } from '@langchain/core/messages';
 
 @Injectable()
 export class UserContextService {
   private readonly redis: Redis = new Redis({
-    host: process.env.REDIS_URL || 'localhost',
+    host: process.env.REDIS_HOST || 'localhost',
     port: Number(process.env.REDIS_PORT) || 6379,
     password: process.env.REDIS_PASSWORD,
   });

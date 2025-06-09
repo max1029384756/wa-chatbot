@@ -106,4 +106,21 @@ export class WhatsappController {
 
     return 'Message processed';
   }
+
+  @Post('webhook/test')
+  @HttpCode(200)
+  test(@Body() request: any) {
+    const { messages } = request?.entry?.[0]?.changes?.[0].value ?? {};
+    this.logger.debug('Received test messages:', messages);
+    if (!messages) return 'ok';
+
+    const message = messages[0];
+
+    switch (message.type) {
+      case 'text':
+        return this.whatsAppService.handleTestTextMessage(message);
+    }
+
+    return 'Message processed';
+  }
 }

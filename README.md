@@ -1,24 +1,24 @@
 
 
-<p align="center"> <a href="http://nestjs.com/" target="blank"><img src="https://github.com/user-attachments/assets/39665bff-a4b3-46ea-9752-2e85b36b7bab" height="300"  alt="Nest Logo" /></a> </p> <p align="center"> A production-ready <a href="http://nodejs.org" target="_blank">Node.js</a> WhatsApp chatbot built with <a href="https://nestjs.com/" target="_blank">NestJS</a>, leveraging the <a href="https://developers.facebook.com/docs/whatsapp/cloud-api" target="_blank">WhatsApp Cloud API</a> for direct integration with WhatsApp, GPT-4o for conversational intelligence and Redis (free tier from Upstash) for context management. </p>
+<!-- <p align="center"> <a href="http://nestjs.com/" target="blank"><img src="https://github.com/user-attachments/assets/39665bff-a4b3-46ea-9752-2e85b36b7bab" height="300"  alt="Nest Logo" /></a> </p> <p align="center"> A production-ready <a href="http://nodejs.org" target="_blank">Node.js</a> WhatsApp chatbot built with <a href="https://nestjs.com/" target="_blank">NestJS</a>, leveraging the <a href="https://developers.facebook.com/docs/whatsapp/cloud-api" target="_blank">WhatsApp Cloud API</a> for direct integration with WhatsApp, GPT-4o for conversational intelligence and Redis (free tier from Upstash) for context management. </p> -->
 
 
 ## Step-by-Step Guide
 For a detailed, step-by-step guide on building this chatbot, check out:
 
-### NestJS WhatsApp Chatbot with GPT-4o
+<!-- ### NestJS WhatsApp Chatbot with GPT-4o
 [<img width="960" alt="WhatsApp AI Chatbot" src="https://github.com/user-attachments/assets/ed05d93e-613a-41db-8514-b12d722fe246">](https://www.youtube.com/watch?v=Nn9JJ8IdxM8&list=PLX8Kj-tc4dHallx-LJ-5uu894S7f52xIC&index=1)
 
 ### Text-To-Image generation with Stable Diffusion model
-[<img width="960" alt="WhatsApp AI Chatbot" src="https://github.com/user-attachments/assets/7c164df6-40df-4f15-84a3-32e04f196412">](https://www.youtube.com/watch?v=gxmlZgVjnv8&list=PLX8Kj-tc4dHallx-LJ-5uu894S7f52xIC&index=4)
+[<img width="960" alt="WhatsApp AI Chatbot" src="https://github.com/user-attachments/assets/7c164df6-40df-4f15-84a3-32e04f196412">](https://www.youtube.com/watch?v=gxmlZgVjnv8&list=PLX8Kj-tc4dHallx-LJ-5uu894S7f52xIC&index=4) -->
 
-**Key Features:**
+<!-- **Key Features:**
 
 * **GPT-4o Integration:** Utilises the advanced capabilities of GPT-4o for natural language understanding and generation, ensuring engaging and intelligent conversations.
 * **Text-To-Image Generation:** Utilises Stability AI's `Stable Diffusion` model for text-to-image generation.
 * **Redis for Context:** Stores conversation context in Redis, enabling the chatbot to maintain a cohesive dialogue and provide context-aware responses.
 * **NestJS Framework:** Built on the robust and scalable NestJS framework, providing a well-structured and maintainable codebase.
-* **Production-Ready:** Designed with production environments in mind, ensuring security, stability, scalability, and reliability.
+* **Production-Ready:** Designed with production environments in mind, ensuring security, stability, scalability, and reliability. -->
 
 **Getting Started:**
 
@@ -106,48 +106,105 @@ ngrok http 3015  (need vpn)
 ** Waba text msg webhook **
 ```json
 {
-   request:
-      {
-  "entry": [
+  request:
     {
-      "changes": [
+      "entry": [
         {
-          "field": "messages",
-          "value": {
-            "contacts": [
-              {
-                "profile": {
-                  "name": "Max"
-                },
-                "wa_id": "79485221188"
+          "changes": [
+            {
+              "field": "messages",
+              "value": {
+                "contacts": [
+                  {
+                    "profile": {
+                      "name": "Max"
+                    },
+                    "wa_id": "79384021087"
+                  }
+                ],
+                "messages": [
+                  {
+                    "from": "79384021087",
+                    "id": "wamid.HBgLNzkzODQwMjEwODcVAgASGBQzQURFODI3OTA3RjA2MEFDQTQ0NwA=",
+                    "text": {
+                      "body": "hellllo"
+                    },
+                    "timestamp": "1749457925",
+                    "type": "text"
+                  }
+                ],
+                "messaging_product": "whatsapp",
+                "metadata": {
+                  "display_phone_number": "94741442190",
+                  "phone_number_id": "709267392266149"
+                }
               }
-            ],
-            "messages": [
-              {
-                "from": "79485221188",
-                "id": "wamid.HBgLNzkzODQwMjEwODcVAgASGCAzNDk4NENGODNFNTgyMDQ4REM5OEJGQzRFMjRGMTFDRAA=",
-                "text": {
-                  "body": "How is going?"
-                },
-                "timestamp": "1748875664",
-                "type": "text"
-              }
-            ],
-            "messaging_product": "whatsapp",
-            "metadata": {
-              "display_phone_number": "94741442190",
-              "phone_number_id": "709267392266149"
             }
-          }
+          ],
+          "id": "600101339185613"
         }
       ],
-      "id": "600101339185613"
-    }
-  ],
-  "gs_app_id": "564d5cff-2892-46dc-874a-6528d602d2b6",
-  "object": "whatsapp_business_account"
-}
+      "gs_app_id": "564d5cff-2892-46dc-874a-6528d602d2b6",
+      "object": "whatsapp_business_account"
+    }    
 }
 ```
 
 +94741442190 Good Story Agent
+
+
+## Step-by-step: How to Run the Application
+
+### 1. Local Development/Debugging (with hot reload)
+
+1. **Start all services in development mode:**
+   ```zsh
+   docker compose -f docker-compose.dev.yml up --build
+   ```
+   ```zsh
+   npm run start:debug
+   ```
+   - This will start the app in debug mode with hot reload (the app doesn't work yet in the container because of faiss)
+   - Any code changes you make will automatically restart the app.
+
+2. **Access your app:**
+   - Open [http://localhost:3015](http://localhost:3015) in your browser.
+
+3. **Stop all services:**
+   ```zsh
+   docker compose -f docker-compose.dev.yml down
+   ```
+
+---
+
+### 2. Production Mode (on the server)
+
+1. **Build and start all services in production mode:**
+   ```zsh
+   docker compose -f docker-compose.prod.yml up --build -d
+   ```
+   - This will build the dbs stage
+   
+    ```zsh
+   npm run build
+   ```
+
+   ```zsh
+   pm2 restart your-app || pm2 start dist/main.js --name your-app
+   ```
+   - The app will run in the background.
+
+2. **Check logs (optional):**
+   ```zsh
+   docker compose -f docker-compose.prod.yml logs -f app
+   ```
+   ```zsh
+   pm2 logs
+    ```
+
+3. **Stop all services:**
+   ```zsh
+   docker compose -f docker-compose.prod.yml down
+
+
+
