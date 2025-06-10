@@ -114,8 +114,7 @@ After three clarifying attempts, if you still cannot determine the intent or fin
 If the user question is in another language, respond in that same language.
 
 SOURCES:
-{context}
-`;
+{context}`;
   }
   // `You are a helpful assistant of the Good Story Village company. Use the provided chat history and context to answer the user's question accurately.
   // {context}`;
