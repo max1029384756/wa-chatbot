@@ -32,7 +32,7 @@ For a detailed, step-by-step guide on building this chatbot, check out:
 
 3. **Configure Environment Variables:**
 
-    - Set up environment variables for API keys (OpenAI, WhatsApp API provider), database credentials (Redis), and other necessary configurations.
+    - Set up environment variables for API keys (OpenAI, Gupshup API provider), database credentials (Redis, Postgres), and other necessary configurations.
 
 4. **Run the Chatbot:**
 
@@ -91,19 +91,21 @@ This chatbot is made possible by the incredible work of the following projects:
 * [ioredis](https://github.com/luin/ioredis)
 * [openai](https://github.com/openai/openai-node)
 
-**Join the Conversation:**
-
-More features to be added to the chatbot, stay in the loop:
-
-* [My Youtube Channel](https://www.youtube.com/channel/UChZk6jLmTKn2BINb9o51otQ)
-* [Say Hi On LinkedIn](https://www.linkedin.com/in/tafadzwa-demba/)
 
 **Let's build a smarter and more engaging WhatsApp experience!** 
 
-** Run server locally **
-ngrok http 3015  (need vpn)
 
-** Waba text msg webhook **
+**Run server locally**
+
+This will allow you to receive webhooks from WhatsApp to your local server.
+
+```bash
+ngrok http 3015  (need vpn)
+ollama
+```
+
+
+**Waba text msg webhook structure**
 ```json
 {
   request:
@@ -157,9 +159,9 @@ ngrok http 3015  (need vpn)
 
 ### 1. Local Development/Debugging (with hot reload)
 
-1. **Start all services in development mode:**
+1. **Start db and app services in development mode:**
    ```zsh
-   docker compose -f docker-compose.dev.yml up --build
+   docker compose -f docker-compose.dev.yml up -d --build
    ```
    ```zsh
    npm run start:debug
@@ -205,6 +207,14 @@ ngrok http 3015  (need vpn)
 3. **Stop all services:**
    ```zsh
    docker compose -f docker-compose.prod.yml down
+
+
+look at the db
+```bash
+docker exec -it gs_wa_agent_psdb psql -U dbuser -h gs_wa_agent_psdb -d gs_wa_agent_db -W
+#insert pass
+select * from message-history;
+```
 
 
 

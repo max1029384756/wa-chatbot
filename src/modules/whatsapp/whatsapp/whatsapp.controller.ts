@@ -102,6 +102,9 @@ export class WhatsappController {
       //   }
 
       //   await this.whatsAppService.sendAudioByUrl(messageSender, textToSpeech.data);
+      default:
+        this.logger.warn(`Unhandled message type: ${message.type}`);
+        break;
     }
 
     return 'Message processed';
