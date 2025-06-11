@@ -36,7 +36,7 @@ export class AiService {
   private readonly logger = new Logger(AiService.name);
   private readonly questionCategoryToolName = 'get_question_category';
   private readonly model = new ChatOpenAI({
-    model: 'gpt-3.5-turbo',
+    model: 'gpt-4-turbo',
     temperature: 0.5, // 0 for no creativity
   }); /* new ChatOllama({
     temperature: 0, // 0 чтоб без креативности
