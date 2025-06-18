@@ -152,6 +152,34 @@ ollama
 }
 ```
 
+**Inst text msg webhook structure**
+```json
+{
+  "object": "instagram",
+  "entry": [
+    {
+      "time": 1750173841899,
+      "id": "17841475555245128",
+      "messaging": [
+        {
+          "sender": {
+            "id": "1086037003446445"
+          },
+          "recipient": {
+            "id": "17841475555245128"
+          },
+          "timestamp": 1750173841164,
+          "message": {
+            "mid": "aWdfZAG1faXRlbToxOklHTWVzc2FnZAUlEOjE3ODQxNDc1NTU1MjQ1MTI4OjM0MDI4MjM2Njg0MTcxMDMwMTI0NDI1OTcxODE3NjE1NDE1Nzg0NjozMjI4NTAwODkzMjQ1NDc1MzQ3Njg0Nzg1NTc3MDUzMzg4OAZDZD",
+            "text": "You do?"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
 +94741442190 Good Story Agent
 
 
@@ -191,6 +219,8 @@ ollama
    npm run build
    ```
 
+   - Copy env variables and config if necessary
+
    ```zsh
    pm2 restart your-app || pm2 start dist/main.js --name your-app
    ```
@@ -213,7 +243,7 @@ look at the db
 ```bash
 docker exec -it gs_wa_agent_psdb psql -U dbuser -h gs_wa_agent_psdb -d gs_wa_agent_db -W
 #insert pass
-select * from message-history;
+select * from message_history;
 ```
 
 

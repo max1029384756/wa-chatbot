@@ -21,7 +21,7 @@ export class WhatsappController {
 
   @Get('webhook')
   whatsappVerificationChallenge(@Req() request: Request) {
-    this.logger.debug('Received messages:', request);
+    // this.logger.debug('Received messages:', JSON.stringify(request.query));
     const mode = request.query['hub.mode'];
     const challenge = request.query['hub.challenge'];
     const token = request.query['hub.verify_token'];
@@ -55,9 +55,12 @@ export class WhatsappController {
   @HttpCode(200)
   async handleIncomingWhatsappMessage(@Body() request: any) {
     const { messages } = request?.entry?.[0]?.changes?.[0].value ?? {};
-    // this.logger.debug('Received request:', request);
+    this.logger.debug('Received request:', request);
 
-    this.logger.debug('Received messages:', messages);
+    if (request?.object === 'instagram') {
+      this.whatsAppService.handleInstMessage(request.entry?.[0]?.messaging[0]);
+    }
+    // this.logger.debug('Received messages:', messages);
     if (!messages) return 'ok';
 
     const message = messages[0];
@@ -113,6 +116,18 @@ export class WhatsappController {
   @Post('webhook/test')
   @HttpCode(200)
   test(@Body() request: any) {
+    if (request.object === 'instagram') {
+      const { sender, message, timestamp } = request.entry?.[0]?.messaging[0];
+      return this.whatsAppService.handleTestTextMessage({
+        from: sender.id,
+        id: message.mid,
+        text: {
+          body: message.text,
+        },
+        timestamp,
+        type: 'text',
+      });
+    }
     const { messages } = request?.entry?.[0]?.changes?.[0].value ?? {};
     this.logger.debug('Received test messages:', messages);
     if (!messages) return 'ok';

@@ -4,16 +4,17 @@ import * as path from 'path';
 import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { FaissStore } from '@langchain/community/vectorstores/faiss';
-import { OllamaEmbeddings } from '@langchain/ollama';
+// import { OllamaEmbeddings } from '@langchain/ollama';
 // import { BlobServiceClient } from '@azure/storage-blob';
-import { faissStoreFolder, ollamaEmbeddingsModel } from '@/constants';
+import { faissStoreFolder /* , ollamaEmbeddingsModel */ } from '@/constants';
 import { ConfigService } from '@nestjs/config';
+import { OpenAIEmbeddings } from '@langchain/openai';
 
 @Injectable()
 export class DocumentsService {
   private readonly logger = new Logger(DocumentsService.name);
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly configService: ConfigService) { }
 
   async parseAndSaveDocuments(dataFolder: string) {
     try {
@@ -35,14 +36,20 @@ export class DocumentsService {
 
           // Split the text into smaller chunks
           const splitter = new RecursiveCharacterTextSplitter({
-            chunkSize: 1000,
-            chunkOverlap: 100,
+            chunkSize: 1024,
+            chunkOverlap: 512,
           });
           const documents = await splitter.splitDocuments(rawDocument);
 
           // Generate embeddings and save in the database
           console.log('Using Ollama models and local DB');
-          const embeddings = new OllamaEmbeddings({ model: ollamaEmbeddingsModel });
+          // const embeddings = new OllamaEmbeddings({
+          //   model: 'jeffh/intfloat-multilingual-e5-large-instruct:f32' /* ollamaEmbeddingsModel */,
+          // });
+
+          const embeddings = new OpenAIEmbeddings({
+            modelName: 'text-embedding-3-small', // Multilingual
+          });
 
           const businessFaissStoreFolder = faissStoreFolder;
           const folderExists = await this.checkFolderExists(businessFaissStoreFolder);

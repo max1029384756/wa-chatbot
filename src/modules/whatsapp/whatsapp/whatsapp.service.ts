@@ -78,6 +78,41 @@ export class WhatsappService {
     return this.sendTextMessage(userId, response, messageId);
   }
 
+  async handleInstMessage({ sender, recipient, message, timestamp }) {
+    this.logger.debug('incoming inst message', { sender, recipient, message, timestamp });
+    const aiResponse = await this.aiService.generateAIResponse(recipient.id, sender.id, message.text);
+
+    const igId = recipient.id; //this.configService.get('INSTAGRAM_IG_ID');
+    // const accessToken = this.configService.get('services')?.instagram?.accessToken;
+
+    const url = `https://graph.instagram.com/v23.0/${igId}/messages`;
+    const body = {
+      recipient: {
+        id: sender.id,
+      },
+      message: {
+        text: aiResponse,
+      },
+    };
+
+    this.logger.debug({ url, body });
+
+    // try {
+    //   const response = await lastValueFrom(
+    //     this.httpService.post(url, body, {
+    //       headers: {
+    //         Authorization: `Bearer ${accessToken}`,
+    //         'Content-Type': 'application/json',
+    //       },
+    //     }),
+    //   );
+
+    //   this.logger.debug({ response: response.data });
+    // } catch (error) {
+    //   this.logger.error(error);
+    // }
+  }
+
   async handleTextMessage(message: IIncomingMessage) {
     const messageSenderId = message.from;
     const messageText = message.text.body;

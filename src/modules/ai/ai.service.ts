@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { UserContextService } from 'src/modules/user-context/user-context.service';
-import { OllamaEmbeddings } from '@langchain/ollama';
-import { ollamaEmbeddingsModel, faissStoreFolder, COMMANDS } from 'src/constants';
+// import { ChatOllama, OllamaEmbeddings } from '@langchain/ollama';
+import { /* ollamaChatModel, ollamaEmbeddingsModel, */ faissStoreFolder /*, COMMANDS */ } from 'src/constants';
 import { FaissStore } from '@langchain/community/vectorstores/faiss';
 import { createStuffDocumentsChain } from 'langchain/chains/combine_documents';
 import { ChatPromptTemplate, PromptTemplate } from '@langchain/core/prompts';
@@ -9,8 +9,8 @@ import { RunnableWithMessageHistory } from '@langchain/core/runnables';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { ChatState } from 'src/modules/user-context/interfaces';
-import { MessageContent } from '@langchain/core/messages';
-import { ChatOpenAI } from '@langchain/openai';
+// import { MessageContent } from '@langchain/core/messages';
+import { OpenAIEmbeddings, ChatOpenAI } from '@langchain/openai';
 
 import { RedisChatMessageHistory } from '@langchain/community/stores/message/ioredis';
 import { Business, HumanRequest } from '@/modules/ai/interfaces';
@@ -36,9 +36,9 @@ export class AiService {
   private readonly logger = new Logger(AiService.name);
   private readonly questionCategoryToolName = 'get_question_category';
   private readonly model = new ChatOpenAI({
-    model: 'gpt-3.5-turbo',
-    temperature: 0.5, // 0 for no creativity
-  }); /* new ChatOllama({
+    model: 'gpt-4o',
+    temperature: 0.7, // 0 for no creativity
+  }); /*  new ChatOllama({
     temperature: 0, // 0 чтоб без креативности
     model: ollamaChatModel,
   }); */
@@ -102,16 +102,10 @@ export class AiService {
 
     // SOURCES:
     // {context}`;
-    return `You are a helpful assistant of the Good Story company. You help customers with questions and support requests. Be brief in your answers. Maintain a friendly, clear, and professional tone. Answer only in plain text. DO NOT use Markdown.
-
-Your answers must be based ONLY on the provided SOURCES. Do not generate answers from general knowledge or assumptions.
-
-If a user question is unclear or unrelated to the Good Story company, ask a clarifying question to help understand their intent. You may ask up to three clarifying questions. Example clarifications: "Could you please clarify what you mean by [topic]?" or "Can you provide more details about [subject]?"
-
-After three clarifying attempts, if you still cannot determine the intent or find relevant information in the SOURCES, respond with:
-"Sorry, I don't have that information after clarifying. ${this.getSupportContactInfo()}"
-
-If the user question is in another language, respond in that same language.
+    return `You are a helpful assistant of the Good Story company. You help customers with questions and support requests. Be brief in your answers. Maintain a friendly, clear, and professional tone. Answer only in plain text, DO NOT use Markdown.
+Answer ONLY with information from the sources below and relevant to the Good Story company, do not generate answers that don't use the sources. If there isn't enough information in the sources, first try to clarify or rephrase the user's question to better understand their request. For example, ask: "Could you please clarify what you mean by [topic]?" or "Can you provide more details about [subject]?" Do this up to three times.
+If after three clarifications you still cannot answer, say: "Sorry, I don't have that information after clarifying. ${this.getSupportContactInfo()}".
+If the user question is not in English, answer in the language used in the question.
 
 SOURCES:
 {context}`;
@@ -124,7 +118,12 @@ SOURCES:
       const sessionId = `${userId}:${waba}`; // second layer of object
 
       // If no environment variables are set, it means we are running locally
-      const embeddings = new OllamaEmbeddings({ model: ollamaEmbeddingsModel });
+      // const embeddings = new OllamaEmbeddings({
+      //   model: /* ollamaEmbeddingsModel */ 'jeffh/intfloat-multilingual-e5-large-instruct:f32',
+      // });
+      const embeddings = new OpenAIEmbeddings({
+        modelName: 'text-embedding-3-small', // Multilingual
+      });
       const store = await FaissStore.load(faissStoreFolder, embeddings);
       const chatHistory = new RedisChatMessageHistory({
         sessionId,
@@ -184,25 +183,25 @@ SOURCES:
     return this.getSupportContactInfo();
   }
 
-  public async answerQuestion(state: ChatState, topic: string, question: string): Promise<MessageContent> {
-    const embeddings = new OllamaEmbeddings({ model: ollamaEmbeddingsModel });
-    const vectorStore = await FaissStore.load(faissStoreFolder, embeddings);
-    // const vectorStore = vectorStores[topic];
-    const relevantDocs = await vectorStore.similaritySearch(question, 3);
+  // public async answerQuestion(state: ChatState, topic: string, question: string): Promise<MessageContent> {
+  //   const embeddings = new OllamaEmbeddings({ model: ollamaEmbeddingsModel });
+  //   const vectorStore = await FaissStore.load(faissStoreFolder, embeddings);
+  //   // const vectorStore = vectorStores[topic];
+  //   const relevantDocs = await vectorStore.similaritySearch(question, 3);
 
-    const SYSTEM_TEMPLATE = `You are a helpful assistant. Answer the question based on the following context:`;
-    const context = relevantDocs.map((doc) => doc.pageContent).join('\n');
+  //   const SYSTEM_TEMPLATE = `You are a helpful assistant. Answer the question based on the following context:`;
+  //   const context = relevantDocs.map((doc) => doc.pageContent).join('\n');
 
-    // Include chat history in the prompt
-    const chatHistory = state.messages.map((msg) => `${msg.role}: ${msg.content}`).join('\n');
+  //   // Include chat history in the prompt
+  //   const chatHistory = state.messages.map((msg) => `${msg.role}: ${msg.content}`).join('\n');
 
-    const response = await this.model.invoke([
-      { role: 'system', content: SYSTEM_TEMPLATE },
-      { role: 'user', content: `${chatHistory}\n\nContext: ${context}\n\nQuestion: ${question}` },
-    ]);
+  //   const response = await this.model.invoke([
+  //     { role: 'system', content: SYSTEM_TEMPLATE },
+  //     { role: 'user', content: `${chatHistory}\n\nContext: ${context}\n\nQuestion: ${question}` },
+  //   ]);
 
-    return response.content;
-  }
+  //   return response.content;
+  // }
 
   public async routeQuestion(state: ChatState, question: string): Promise<string> {
     const CATEGORIZATION_SYSTEM_TEMPLATE = `You are an expert customer support routing system.
