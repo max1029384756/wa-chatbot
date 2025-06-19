@@ -81,7 +81,7 @@ export class AiService {
     const contacts = this.configService.get<Business[]>('businessContext');
 
     contacts.forEach((contact) => {
-      response += `${contact.name}: ${contact.phone}\n`;
+      response += `${contact.name}: ${contact.phone} - ${contact.website}\n`;
     });
 
     return response.trim();
