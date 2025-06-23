@@ -58,7 +58,7 @@ export class WhatsappController {
     this.logger.debug('Received request:', request);
 
     if (request?.object === 'instagram') {
-      this.whatsAppService.handleInstMessage(request.entry?.[0]?.messaging[0]);
+      this.whatsAppService.handleInstMessage(request);
     }
     // this.logger.debug('Received messages:', messages);
     if (!messages) return 'ok';

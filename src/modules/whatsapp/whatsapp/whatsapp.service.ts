@@ -7,18 +7,19 @@ import * as path from 'path';
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { UserContextService } from 'src/modules/user-context/user-context.service';
 import { ConfigService } from '@nestjs/config';
-// import { COMMANDS } from '@/constants';
-// import { NotificationService } from '@/modules/notifications/interfaces/notification.interface';
+import { IWebhookHandler } from '@/modules/webhook/webhook-handler.interface';
+import { COMMANDS } from '@/constants';
 import { IIncomingMessage } from '@/modules/whatsapp/whatsapp/interfaces/incoming-message.interface';
 import { MessageHistoryService } from '@/modules/message-history/message-history.service';
+import { PROVIDERS } from '@/modules/message-history/providers.constants';
+import { WhatsAppBusinessObject } from '@/modules/whatsapp/whatsapp/interfaces/waba.entry.object.interface';
 
 @Injectable()
-export class WhatsappService {
+export class WhatsappService implements IWebhookHandler {
   constructor(
     private readonly aiService: AiService,
     private readonly userContext: UserContextService,
     private readonly configService: ConfigService,
-    // @Inject('NotificationService') private readonly notificationService: NotificationService,
     private readonly messageHistoryService: MessageHistoryService, // Injected service
   ) {}
 
@@ -78,12 +79,31 @@ export class WhatsappService {
     return this.sendTextMessage(userId, response, messageId);
   }
 
-  async handleInstMessage({ sender, recipient, message, timestamp }) {
-    this.logger.debug('incoming inst message', { sender, recipient, message, timestamp });
+  async handleInstMessage(request) {
+    // this.logger.debug('incoming inst message', { sender, recipient, message, timestamp });
+    const { id: userIgId } = request.entry?.[0];
+    const { sender, recipient, message, timestamp } = request.entry?.[0]?.messaging[0];
+
+    if (userIgId === sender.id) {
+      this.logger.debug('Received message from the same user ID, ignoring message');
+      return;
+    }
+    // сообщение от 6plwlugheam4 и отправитель я мой макскор акк
+    // if (userIgId !== '17841475555245128' && sender.id !== '1089141306401636') {
+    //   this.logger.debug('Not me inst message, ignoring message');
+    //   return;
+    // }
+
+    // TODO: Validating Payloads https://developers.facebook.com/docs/instagram-platform/webhooks
     const aiResponse = await this.aiService.generateAIResponse(recipient.id, sender.id, message.text);
 
     const igId = recipient.id; //this.configService.get('INSTAGRAM_IG_ID');
-    // const accessToken = this.configService.get('services')?.instagram?.accessToken;
+
+    const accessToken = this.getInstagramAccessTokenByUserId(userIgId);
+    if (!accessToken) {
+      this.logger.error(`No access token found for userIgId: ${userIgId}`);
+      return;
+    }
 
     const url = `https://graph.instagram.com/v23.0/${igId}/messages`;
     const body = {
@@ -97,20 +117,32 @@ export class WhatsappService {
 
     this.logger.debug({ url, body });
 
-    // try {
-    //   const response = await lastValueFrom(
-    //     this.httpService.post(url, body, {
-    //       headers: {
-    //         Authorization: `Bearer ${accessToken}`,
-    //         'Content-Type': 'application/json',
-    //       },
-    //     }),
-    //   );
+    try {
+      const response = this.httpService
+        .post(url, body, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        })
+        .pipe(
+          map((res) => {
+            this.logger.log('Response:', res.data);
+            return res.data;
+          }),
+        )
+        .pipe(
+          catchError((error) => {
+            throw new BadRequestException(error);
+          }),
+        );
 
-    //   this.logger.debug({ response: response.data });
-    // } catch (error) {
-    //   this.logger.error(error);
-    // }
+      const messageStatus = await lastValueFrom(response);
+
+      this.logger.debug({ response: messageStatus });
+    } catch (error) {
+      this.logger.error('Error sending inst message:', error);
+    }
   }
 
   async handleTextMessage(message: IIncomingMessage) {
@@ -160,6 +192,7 @@ export class WhatsappService {
       answer: aiResponse,
       generationTime: (end - start) / 1000,
       ...(date && { date }),
+      provider: PROVIDERS.WHATSAPP,
     });
 
     return this.sendTextMessage(messageSenderId, aiResponse, messageId);
@@ -186,6 +219,42 @@ export class WhatsappService {
       answer: aiResponse,
       generationTime: (end - start) / 1000,
       ...(date && { date }),
+      provider: PROVIDERS.WHATSAPP,
+    });
+
+    this.logger.log('aiResponse: ', aiResponse);
+
+    return aiResponse;
+  }
+
+  public async handleTestWebhook(payload: WhatsAppBusinessObject) {
+    this.logger.debug('Received payload:', payload);
+    const { messages } = payload?.entry?.[0]?.changes?.[0].value ?? {};
+
+    if (!messages) return 'ok';
+
+    const message = messages[0];
+    const messageSenderId = message.from;
+    const messageText = message.text.body;
+    const timestamp = message.timestamp;
+    const source = process.env.GUPSHUP_SOURCE_NUMBER;
+
+    const start = Date.now();
+    const aiResponse = await this.aiService.generateAIResponse(source, messageSenderId, messageText);
+    const end = Date.now();
+
+    let date: Date | undefined = undefined;
+    if (timestamp) {
+      const ms = Number(timestamp) * 1000;
+      date = new Date(ms);
+    }
+    await this.messageHistoryService.save({
+      clientId: messageSenderId,
+      question: messageText,
+      answer: aiResponse,
+      generationTime: (end - start) / 1000,
+      ...(date && { date }),
+      provider: PROVIDERS.WHATSAPP,
     });
 
     this.logger.log('aiResponse: ', aiResponse);
@@ -231,21 +300,21 @@ export class WhatsappService {
           })
           .pipe(
             map((res) => {
-              this.logger.log('Response:', res.data);
+              // this.logger.log('Response:', res.data);
               return res.data;
             }),
           )
           .pipe(
             catchError((error) => {
               this.logger.error(error);
-              throw new BadRequestException('Error Marking Message As Read');
+              throw new BadRequestException('Error sending message to WhatsApp Cloud API');
             }),
           );
 
         const messageStatus = await lastValueFrom(response);
         this.logger.log('Message Sent. Status:', messageStatus);
       } catch (error) {
-        console.error('Error sending message:', error);
+        this.logger.error('Error sending message:', error);
       }
 
       // const messageSendingStatus = await lastValueFrom(resp);
@@ -410,5 +479,82 @@ export class WhatsappService {
       this.logger.error(error);
       return 'Axle broke!! Abort mission!!';
     }
+  }
+
+  /**
+   * Returns the correct Instagram access token for a given userIgId using configService.
+   * Assumes config structure: services.instagram.accessTokens = { [userIgId]: token }
+   */
+  private getInstagramAccessTokenByUserId(userIgId: string): string | undefined {
+    const accessTokens = this.configService.get<Record<string, string>>('services.instagram.accessTokens');
+    // if (!accessTokens) {
+    //   this.logger.warn('No Instagram accessTokens found in config');
+    //   return undefined;
+    // }
+    const token = accessTokens[userIgId];
+    // if (!token) {
+    //   this.logger.warn(`No Instagram access token found for userIgId: ${userIgId}`);
+    //   return undefined;
+    // }
+    return token;
+  }
+
+  async handleWebhook(payload: WhatsAppBusinessObject): Promise<any> {
+    this.logger.debug('Received payload:', payload);
+    const { messages } = payload?.entry?.[0]?.changes?.[0].value ?? {};
+
+    if (!messages) return 'ok';
+
+    const message = messages[0];
+    const messageSenderId = message.from;
+    const messageText = message.text.body;
+    const messageId = message.id;
+    const source = process.env.GUPSHUP_SOURCE_NUMBER;
+    const timestamp = message.timestamp;
+
+    this.logger.log(`userId: ${messageSenderId}, waba: ${source}`, messageText);
+
+    // const isManagerCalled = await this.isManagerCalled(wabaId, userId);
+
+    // if (isManagerCalled) {
+    //   const response =
+    //     'I see you’re still waiting—don’t worry, your request is queued! For faster help, you can call this number to speak directly'; // TODO: нужно ли здесь чтото отвечать 'A manager is currently assisting you. Please wait.';
+
+    //   return this.sendTextMessage(userId, response, messageId);
+    // }
+
+    // if (messageText.includes(COMMANDS.CALL_HUMAN)) {
+    //   // return 'ok'
+    //   return await this.callManager(source, messageSenderId, messageText, messageId);
+    // }
+
+    if (await this.aiService.isHumanRequest(messageText)) {
+      // TODO доавить кнопку с командой COMMANDS.CALL_HUMAN
+      // или проверить возможность добавления команд в вабу
+      // const response = `To connect with a human, please enter the command ${COMMANDS.CALL_HUMAN}.`;
+      const response = `You requested to be connected with a manager.\n${this.aiService.callHuman()}`;
+
+      return this.sendTextMessage(messageSenderId, response, messageId);
+    }
+
+    const start = Date.now();
+    const aiResponse = await this.aiService.generateAIResponse(source, messageSenderId, messageText);
+    const end = Date.now();
+
+    let date: Date | undefined = undefined;
+    if (timestamp) {
+      const ms = Number(timestamp) * 1000;
+      date = new Date(ms);
+    }
+    await this.messageHistoryService.save({
+      clientId: messageSenderId,
+      question: messageText,
+      answer: aiResponse,
+      generationTime: (end - start) / 1000,
+      ...(date && { date }),
+      provider: PROVIDERS.WHATSAPP,
+    });
+
+    return this.sendTextMessage(messageSenderId, aiResponse, messageId);
   }
 }
