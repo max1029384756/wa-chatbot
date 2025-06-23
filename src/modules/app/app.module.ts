@@ -12,6 +12,7 @@ import { CommandModule } from 'nestjs-command';
 import { NotificationModule } from '@/modules/notifications/notifications.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MessageHistoryModule } from '@/modules/message-history/message-history.module';
+import { WebhookModule } from '@/modules/webhook/webhook.module';
 
 @Module({
   imports: [
@@ -30,7 +31,7 @@ import { MessageHistoryModule } from '@/modules/message-history/message-history.
         password: configService.get('POSTGRES_PASSWORD', 'postgres'),
         database: configService.get('POSTGRES_DB', 'gs_wa_agent_db'),
         autoLoadEntities: true,
-        synchronize: true,
+        synchronize: false,
       }),
       inject: [ConfigService],
     }),
@@ -42,6 +43,7 @@ import { MessageHistoryModule } from '@/modules/message-history/message-history.
     CommandModule,
     NotificationModule,
     MessageHistoryModule,
+    WebhookModule,
   ],
   controllers: [AppController],
   providers: [AppService],

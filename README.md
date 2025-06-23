@@ -243,8 +243,15 @@ look at the db
 ```bash
 docker exec -it gs_wa_agent_psdb psql -U dbuser -h gs_wa_agent_psdb -d gs_wa_agent_db -W
 #insert pass
-select * from message_history;
 ```
+
+```sql
+select * from message_history;
+select "clientId", "question", "answer" from message_history WHERE "date" > '2025-06-20 00:00:00' and "clientId" = '94774546141' order by "date" asc limit 30;
+```
+
+** Insta
+17841429102711673 - GSVillage user
 
 
 
