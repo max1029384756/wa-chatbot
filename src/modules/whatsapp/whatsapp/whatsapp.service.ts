@@ -506,6 +506,9 @@ export class WhatsappService implements IWebhookHandler {
     if (!messages) return 'ok';
 
     const message = messages[0];
+
+    await this.markMessageAsRead(message.id);
+
     const messageSenderId = message.from;
     const messageText = message.text.body;
     const messageId = message.id;
