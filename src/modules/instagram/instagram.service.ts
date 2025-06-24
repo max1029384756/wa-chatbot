@@ -49,7 +49,7 @@ export class InstagramService implements IWebhookHandler {
 
     let date: Date | undefined = undefined;
     if (timestamp) {
-      const ms = Number(timestamp) * 1000;
+      const ms = Number(timestamp);
       date = new Date(ms);
     }
     await this.messageHistoryService.save({
@@ -118,7 +118,7 @@ export class InstagramService implements IWebhookHandler {
 
     let date: Date | undefined = undefined;
     if (timestamp) {
-      const ms = Number(timestamp) * 1000;
+      const ms = Number(timestamp);
       date = new Date(ms);
     }
     await this.messageHistoryService.save({
