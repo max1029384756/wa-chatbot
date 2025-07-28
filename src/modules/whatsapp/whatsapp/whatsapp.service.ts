@@ -508,6 +508,11 @@ export class WhatsappService implements IWebhookHandler {
 
     const message = messages[0];
 
+    if (!message.text) {
+      this.logger.debug('Received message without text, ignoring', message);
+      return;
+    }
+
     await this.markMessageAsRead(message.id);
 
     // temporary solution to muffle ping pong robots

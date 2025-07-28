@@ -31,6 +31,11 @@ export class InstagramService implements IWebhookHandler {
     const { id: instagramUserId } = payload.entry?.[0];
     const { sender, recipient, message, timestamp } = payload.entry?.[0]?.messaging[0];
 
+    if (!message.text) {
+      this.logger.debug('Received message without text, ignoring', message);
+      return;
+    }
+
     // TODO: for message field "is_echo": true; message.is_echo
     if (instagramUserId === sender.id) {
       this.logger.debug('Received message from the same user ID, ignoring message');
