@@ -8,7 +8,7 @@ import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { UserContextService } from 'src/modules/user-context/user-context.service';
 import { ConfigService } from '@nestjs/config';
 import { IWebhookHandler } from '@/modules/webhook/webhook-handler.interface';
-import { COMMANDS } from '@/constants';
+// import { COMMANDS } from '@/constants';
 import { IIncomingMessage } from '@/modules/whatsapp/whatsapp/interfaces/incoming-message.interface';
 import { MessageHistoryService } from '@/modules/message-history/message-history.service';
 import { PROVIDERS } from '@/modules/message-history/providers.constants';
@@ -21,7 +21,8 @@ export class WhatsappService implements IWebhookHandler {
     private readonly userContext: UserContextService,
     private readonly configService: ConfigService,
     private readonly messageHistoryService: MessageHistoryService, // Injected service
-  ) {}
+    // eslint-disable-next-line prettier/prettier
+  ) { }
 
   private readonly httpService = new HttpService();
   private readonly logger = new Logger(WhatsappService.name);
@@ -82,7 +83,7 @@ export class WhatsappService implements IWebhookHandler {
   async handleInstMessage(request) {
     // this.logger.debug('incoming inst message', { sender, recipient, message, timestamp });
     const { id: userIgId } = request.entry?.[0];
-    const { sender, recipient, message, timestamp } = request.entry?.[0]?.messaging[0];
+    const { sender, recipient, message } = request.entry?.[0]?.messaging[0];
 
     if (userIgId === sender.id) {
       this.logger.debug('Received message from the same user ID, ignoring message');
@@ -508,6 +509,10 @@ export class WhatsappService implements IWebhookHandler {
     const message = messages[0];
 
     await this.markMessageAsRead(message.id);
+
+    // temporary solution to muffle ping pong robots
+    // 46766920346 Altegio
+    if (message.from === '46766920346') return 'ok';
 
     const messageSenderId = message.from;
     const messageText = message.text.body;
