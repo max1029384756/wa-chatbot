@@ -3,6 +3,7 @@ import { WebhookController } from './webhook.controller';
 import { WebhookService } from './webhook.service';
 import { WhatsappService } from '@/modules/whatsapp/whatsapp/whatsapp.service';
 import { InstagramService } from '@/modules/instagram/instagram.service';
+import { TelegramService } from '@/modules/telegram/telegram.service';
 import { AiService } from '@/modules/ai/ai.service';
 import { UserContextService } from '@/modules/user-context/user-context.service';
 import { ConfigService } from '@nestjs/config';
@@ -20,13 +21,19 @@ import { HttpModule } from '@nestjs/axios';
     ConfigService,
     WhatsappService,
     InstagramService,
+    TelegramService,
     {
       provide: 'WEBHOOK_HANDLERS',
-      useFactory: (whatsappService: WhatsappService, instagramService: InstagramService) => ({
+      useFactory: (
+        whatsappService: WhatsappService,
+        instagramService: InstagramService,
+        telegramService: TelegramService,
+      ) => ({
         whatsapp: whatsappService,
         instagram: instagramService,
+        telegram: telegramService,
       }),
-      inject: [WhatsappService, InstagramService],
+      inject: [WhatsappService, InstagramService, TelegramService],
     },
   ],
   exports: [WebhookService],

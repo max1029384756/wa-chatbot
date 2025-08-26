@@ -61,6 +61,13 @@ For a detailed, step-by-step guide on building this chatbot, check out:
    2. Create a WhatsApp Business account and integrate it with your Facebook Developer account.
    3. Follow the official WhatsApp Cloud API documentation to configure your chatbot. (details to be saved to your environment file)
 
+## Connecting Your Backend To Telegram:
+
+- **No third-party providers needed!**
+  ```curl
+    curl -F "url=https://yourdomain.com/webhook/telegram" \
+      https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook
+  ```
 
 **Testing (Contributions are welcome - running by grace, no tests):**
 
@@ -178,6 +185,31 @@ ollama
     }
   ]
 }
+```
+
+**Inst text msg webhook structure**
+```json
+  {
+    "update_id": 789009431,
+    "message": {
+      "message_id": 7,
+      "from": {
+        "id": 5577672069,
+        "is_bot": false,
+        "first_name": "\u041c\u0430\u043a\u0441",
+        "username": "chemgfn",
+        "language_code": "en"
+      },
+      "chat": {
+        "id": 5577672069,
+        "first_name": "\u041c\u0430\u043a\u0441",
+        "username": "chemgfn",
+        "type": "private"
+      },
+      "date": 1756192222,
+      "text": "11"
+    }
+  }
 ```
 
 +94741442190 Good Story Agent
