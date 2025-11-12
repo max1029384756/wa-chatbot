@@ -273,7 +273,7 @@ ollama
 
 look at the db
 ```bash
-docker exec -it gs_wa_agent_psdb psql -U dbuser -h gs_wa_agent_psdb -d gs_wa_agent_db -W
+docker exec -it gs_wa_agent_psdb psql -U dbuser  -d gs_wa_agent_db -W
 #insert pass
 ```
 
@@ -287,3 +287,15 @@ select "clientId", "question", "answer" from message_history WHERE "date" > '202
 
 
 
+### 🔧 Инструкция по обновлению GSiAgent
+
+1. **Войти в Facebook-аккаунт** `GSiAgent`.
+2. **Перезайти в Instagram**  
+   > Перестало работать **2 ноя 2025** — до этого нужно проверить подключение в **WhatsApp**.
+3. **Заменить токены** в `.env` для **трёх аккаунтов**.
+4. **Подключиться по SSH**:
+   ```bash
+   ssh gsclub_maxcore
+   cd /var/www/gs-wa-GSiAgent
+   pm2 restart 0
+5. **Проверить в ва и инстe 3 акка**
