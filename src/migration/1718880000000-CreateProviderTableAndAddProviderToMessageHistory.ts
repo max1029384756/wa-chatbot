@@ -6,7 +6,7 @@ export class CreateProviderTableAndAddProviderToMessageHistory1718880000000 impl
   public async up(queryRunner: QueryRunner): Promise<void> {
     // 1. Create provider table
     await queryRunner.query(`
-            CREATE TABLE provider (
+            CREATE TABLE IF NOT EXIST provider (
                 id SERIAL PRIMARY KEY,
                 name VARCHAR(255) NOT NULL UNIQUE
             )
