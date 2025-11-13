@@ -13,6 +13,8 @@ import { PROVIDERS } from '@/modules/message-history/providers.constants';
 @Injectable()
 export class InstagramService implements IWebhookHandler {
   private readonly logger = new Logger(InstagramService.name);
+  private static readonly HEART_RESPONSE = '\u2764\uFE0F';
+  private static readonly EMOJI_CHARACTER_REGEX = /[\u203C-\u3299\u{1F000}-\u{1FAFF}]/u;
 
   constructor(
     private readonly aiService: AiService,
@@ -28,11 +30,11 @@ export class InstagramService implements IWebhookHandler {
 
     // TODO: handle no text messages
 
-    const { id: instagramUserId } = payload.entry?.[0];
-    const { sender, recipient, message, timestamp } = payload.entry?.[0]?.messaging[0];
+    const { id: instagramUserId } = payload.entry?.[0] ?? {};
+    const { sender, recipient, message, timestamp } = payload.entry?.[0]?.messaging?.[0] ?? {};
 
-    if (!message.text) {
-      this.logger.debug('Received message without text, ignoring', message);
+    if (!sender?.id || !recipient?.id || !message?.text) {
+      this.logger.debug('Received message without text or sender, ignoring', message);
       return;
     }
 
@@ -47,7 +49,12 @@ export class InstagramService implements IWebhookHandler {
     //   return;
     // }
 
-    // TODO: Validating Payloads https://developers.facebook.com/docs/instagram-platform/webhooks
+    // Respond with a heart when the payload looks like a story/reel reaction or an emoji-only nudge.
+    if (this.shouldSkipRagAndSendHeart(message)) {
+      await this.sendInstagramMessage(instagramUserId, recipient.id, sender.id, InstagramService.HEART_RESPONSE);
+      return;
+    }
+
     const start = Date.now();
     const aiResponse = await this.aiService.generateAIResponse(recipient.id, sender.id, message.text);
     const end = Date.now();
@@ -66,56 +73,20 @@ export class InstagramService implements IWebhookHandler {
       provider: PROVIDERS.INSTAGRAM,
     });
 
-    const accessToken = this.getInstagramAccessTokenByUserId(instagramUserId);
-    if (!accessToken) {
-      this.logger.error(`No access token found for instagramUserId: ${instagramUserId}`);
-      return;
-    }
-
-    const igId = recipient.id;
-    const url = `https://graph.instagram.com/v23.0/${igId}/messages`;
-    const body = {
-      recipient: {
-        id: sender.id,
-      },
-      message: {
-        text: aiResponse,
-      },
-    };
-
-    this.logger.debug({ url, body });
-
-    try {
-      const response = this.httpService
-        .post(url, body, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        })
-        .pipe(
-          map((res) => {
-            this.logger.log('Response:', res.data);
-            return res.data;
-          }),
-        )
-        .pipe(
-          catchError((error) => {
-            throw new BadRequestException(error);
-          }),
-        );
-
-      const messageStatus = await lastValueFrom(response);
-
-      this.logger.debug({ response: messageStatus });
-    } catch (error) {
-      this.logger.error('Error sending inst message:', error);
-    }
+    await this.sendInstagramMessage(instagramUserId, recipient.id, sender.id, aiResponse);
   }
 
   public async handleTestWebhook(payload: InstagramObject): Promise<any> {
     this.logger.debug('Received Instagram webhook', payload);
-    const { sender, recipient, message, timestamp } = payload.entry?.[0]?.messaging[0];
+    const { sender, recipient, message, timestamp } = payload.entry?.[0]?.messaging?.[0] ?? {};
+
+    if (!sender?.id || !recipient?.id || !message?.text) {
+      return undefined;
+    }
+
+    if (this.shouldSkipRagAndSendHeart(message)) {
+      return InstagramService.HEART_RESPONSE;
+    }
 
     const start = Date.now();
     const aiResponse = await this.aiService.generateAIResponse(recipient.id, sender.id, message.text);
@@ -150,5 +121,87 @@ export class InstagramService implements IWebhookHandler {
     //   return undefined;
     // }
     return token;
+  }
+
+  private shouldSkipRagAndSendHeart(message: any): boolean {
+    if (!message) {
+      return false;
+    }
+
+    if (message.reply_to?.story || message.reply_to?.reel) {
+      return true;
+    }
+
+    const normalizedText = message.text?.replace(/\s+/g, '') ?? '';
+    if (!normalizedText) {
+      return false;
+    }
+
+    // Treat short, emoji-only nudges as reactions to avoid running them through RAG.
+    if (normalizedText.length <= 10 && InstagramService.isEmojiOnly(normalizedText)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  private static isEmojiOnly(text: string): boolean {
+    if (!text) {
+      return false;
+    }
+
+    return Array.from(text).every((char) => InstagramService.EMOJI_CHARACTER_REGEX.test(char));
+  }
+
+  private async sendInstagramMessage(
+    instagramUserId: string,
+    igId: string,
+    userId: string,
+    text: string,
+  ): Promise<void> {
+    const accessToken = this.getInstagramAccessTokenByUserId(instagramUserId);
+    if (!accessToken) {
+      this.logger.error(`No access token found for instagramUserId: ${instagramUserId}`);
+      return;
+    }
+
+    const url = `https://graph.instagram.com/v23.0/${igId}/messages`;
+    const body = {
+      recipient: {
+        id: userId,
+      },
+      message: {
+        text,
+      },
+    };
+
+    this.logger.debug({ url, body });
+
+    try {
+      const response = this.httpService
+        .post(url, body, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        })
+        .pipe(
+          map((res) => {
+            this.logger.log('Response:', res.data);
+            return res.data;
+          }),
+        )
+        .pipe(
+          catchError((error) => {
+            throw new BadRequestException(error);
+          }),
+        );
+
+      const messageStatus = await lastValueFrom(response);
+
+      this.logger.debug({ response: messageStatus });
+    } catch (error) {
+      this.logger.error('Error sending inst message:', error);
+    }
   }
 }

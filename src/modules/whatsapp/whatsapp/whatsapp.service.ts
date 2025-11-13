@@ -142,7 +142,7 @@ export class WhatsappService implements IWebhookHandler {
 
       this.logger.debug({ response: messageStatus });
     } catch (error) {
-      this.logger.error('Error sending inst message:', error);
+      this.logger.error('Error sending wa message:', error);
     }
   }
 

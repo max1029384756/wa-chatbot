@@ -27,5 +27,13 @@ export interface User {
 // Интерфейс для содержимого сообщения
 export interface MessageContent {
   mid: string;
-  text: string;
+  text?: string;
+  reply_to?: {
+    story?: {
+      id: string;
+      url?: string;
+    };
+    reel?: Record<string, any>;
+    [key: string]: any;
+  };
 }
