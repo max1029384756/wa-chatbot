@@ -6,6 +6,7 @@ import { HttpService } from '@nestjs/axios';
 import { MessageHistoryService } from '@/modules/message-history/message-history.service';
 import { InstagramObject } from '@/modules/instagram/interfaces/instagram.object.interface';
 import { PROVIDERS } from '@/modules/message-history/providers.constants';
+import { of, throwError } from 'rxjs';
 
 describe('InstagramService', () => {
   let service: InstagramService;
@@ -13,6 +14,7 @@ describe('InstagramService', () => {
   let configService: any;
   let httpService: any;
   let messageHistoryService: any;
+  let developerAlertService: any;
 
   const buildPayload = (overrides: Partial<InstagramObject['entry'][0]['messaging'][0]>): InstagramObject => ({
     object: 'instagram',
@@ -38,12 +40,14 @@ describe('InstagramService', () => {
     configService = { get: jest.fn() };
     httpService = { post: jest.fn() };
     messageHistoryService = { save: jest.fn() };
+    developerAlertService = { notifyInstagramAuthFailure: jest.fn() };
 
     service = new InstagramService(
       aiService as unknown as AiService,
       configService as unknown as ConfigService,
       httpService as unknown as HttpService,
       messageHistoryService as unknown as MessageHistoryService,
+      developerAlertService,
     );
   });
 
@@ -110,6 +114,44 @@ describe('InstagramService', () => {
       );
       const savedPayload = messageHistoryService.save.mock.calls[0][0];
       expect(savedPayload.generationTime).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('sendInstagramMessage', () => {
+    const instagramUserId = 'inst-user';
+    const igId = 'igId';
+    const userId = 'userId';
+
+    beforeEach(() => {
+      configService.get.mockReturnValue({
+        [instagramUserId]: 'token',
+      });
+    });
+
+    it('sends a message successfully', async () => {
+      httpService.post.mockReturnValue(of({ data: { success: true } }));
+
+      await (service as any).sendInstagramMessage(instagramUserId, igId, userId, 'hello');
+
+      expect(httpService.post).toHaveBeenCalledTimes(1);
+      expect(developerAlertService.notifyInstagramAuthFailure).not.toHaveBeenCalled();
+    });
+
+    it('notifies developer on 401 errors', async () => {
+      const axiosError = { response: { status: 401, data: { error: 'Unauthorized' } } };
+      httpService.post.mockReturnValue(throwError(() => axiosError));
+
+      await (service as any).sendInstagramMessage(instagramUserId, igId, userId, 'hello');
+
+      expect(developerAlertService.notifyInstagramAuthFailure).toHaveBeenCalledWith(
+        expect.objectContaining({
+          instagramUserId,
+          igId,
+          userId,
+          statusCode: 401,
+          errorPayload: axiosError.response.data,
+        }),
+      );
     });
   });
 });

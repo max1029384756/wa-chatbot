@@ -4,11 +4,10 @@ import { IWebhookHandler } from '@/modules/webhook/webhook-handler.interface';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
-import { BadRequestException } from '@nestjs/common';
 import { MessageHistoryService } from '@/modules/message-history/message-history.service';
 import { InstagramObject } from '@/modules/instagram/interfaces/instagram.object.interface';
 import { PROVIDERS } from '@/modules/message-history/providers.constants';
+import { DeveloperAlertService } from '@/modules/developer-alert/developer-alert.service';
 
 @Injectable()
 export class InstagramService implements IWebhookHandler {
@@ -21,6 +20,7 @@ export class InstagramService implements IWebhookHandler {
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
     private readonly messageHistoryService: MessageHistoryService,
+    private readonly developerAlertService: DeveloperAlertService,
   ) {}
 
   async handleWebhook(payload: any): Promise<any> {
@@ -178,29 +178,29 @@ export class InstagramService implements IWebhookHandler {
     this.logger.debug({ url, body });
 
     try {
-      const response = this.httpService
-        .post(url, body, {
+      const response = await lastValueFrom(
+        this.httpService.post(url, body, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
-        })
-        .pipe(
-          map((res) => {
-            this.logger.log('Response:', res.data);
-            return res.data;
-          }),
-        )
-        .pipe(
-          catchError((error) => {
-            throw new BadRequestException(error);
-          }),
-        );
+        }),
+      );
 
-      const messageStatus = await lastValueFrom(response);
+      this.logger.debug({ response: response.data });
+    } catch (error: any) {
+      const statusCode = error?.response?.status;
 
-      this.logger.debug({ response: messageStatus });
-    } catch (error) {
+      if (statusCode === 401) {
+        await this.developerAlertService.notifyInstagramAuthFailure({
+          instagramUserId,
+          igId,
+          userId,
+          statusCode,
+          errorPayload: error?.response?.data,
+        });
+      }
+
       this.logger.error('Error sending inst message:', error);
     }
   }

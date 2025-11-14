@@ -212,6 +212,34 @@ ollama
   }
 ```
 
+**Tg text msg webhook structure**
+```json
+// tg webhook sample
+{
+   "update_id": 789009454,
+   "message": {
+     "message_id": 50,
+     "from": {
+       "id": 413364127,
+       "is_bot": false,
+       "first_name": "Max",
+       "last_name": "Korevksy",
+       "username": "rndmax",
+       "language_code": "en"
+     },
+     "chat": {
+       "id": 413364127,
+       "first_name": "Max",
+       "last_name": "Korevksy",
+       "username": "rndmax",
+       "type": "private"
+     },
+     "date": 1763028091,
+     "text": "hi"
+   }
+ }
+```
+
 +94741442190 Good Story Agent
 
 

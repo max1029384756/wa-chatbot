@@ -99,7 +99,9 @@ export default {
     prefetchCount: 5,
     connectionInitOptions: { wait: false },
     enableControllerDiscovery: true,
-    connectionManagerOptions: { heartbeatIntervalInSeconds: parseInt(String(env('RABBITMQ_HEARTBEAT_INTERVAL'))) || 10 },
+    connectionManagerOptions: {
+      heartbeatIntervalInSeconds: parseInt(String(env('RABBITMQ_HEARTBEAT_INTERVAL'))) || 10,
+    },
   },
   amoApiLimiter: {
     reservoir: env('AMOAPI_LIMITER_RESERVOIR') || 7,
@@ -108,5 +110,13 @@ export default {
     maxConcurrent: env('AMOAPI_LIMITER_MAX_CONCURRENT') || 7,
     minTime: env('AMOAPI_LIMITER_MIN_TIME') || 10,
     highWater: env('AMOAPI_LIMITER_HIGHWATER') || 1000,
-  }
+  },
+  services: {
+    developerAlert: {
+      telegram: {
+        chatId: process.env.DEVELOPER_ALERT_TELEGRAM_CHAT_ID || '',
+        deduplicationTtlMs: Number(process.env.DEVELOPER_ALERT_DEDUP_TTL_MS) || 30 * 60 * 1000,
+      },
+    },
+  },
 };

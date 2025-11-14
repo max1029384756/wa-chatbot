@@ -9,6 +9,7 @@ import { UserContextService } from '@/modules/user-context/user-context.service'
 import { ConfigService } from '@nestjs/config';
 import { MessageHistoryModule } from '@/modules/message-history/message-history.module';
 import { HttpModule } from '@nestjs/axios';
+import { DeveloperAlertService } from '@/modules/developer-alert/developer-alert.service';
 
 @Global()
 @Module({
@@ -22,6 +23,7 @@ import { HttpModule } from '@nestjs/axios';
     WhatsappService,
     InstagramService,
     TelegramService,
+    DeveloperAlertService,
     {
       provide: 'WEBHOOK_HANDLERS',
       useFactory: (

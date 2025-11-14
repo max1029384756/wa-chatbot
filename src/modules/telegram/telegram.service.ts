@@ -67,7 +67,7 @@ export class TelegramService {
     await this.sendMessage(chatId, aiResponse);
   }
 
-  async sendMessage(chatId: number, text: string) {
+  async sendMessage(chatId: number | string, text: string) {
     await firstValueFrom(
       this.http.post(`${this.apiUrl}/sendMessage`, {
         chat_id: chatId,
