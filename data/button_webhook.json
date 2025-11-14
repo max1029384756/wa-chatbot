@@ -1,0 +1,42 @@
+// ответ на нажатие кнопки "Call Human" в WhatsApp
+[
+  {
+    "id": "3872195673022574",
+    "changes": [
+      {
+        "value": {
+          "messaging_product": "whatsapp",
+          "metadata": {
+            "display_phone_number": "15556450833",
+            "phone_number_id": "553246817882528"
+          },
+          "contacts": [
+            {
+              "profile": {
+                "name": "922"
+              },
+              "wa_id": "79226360023"
+            }
+          ],
+          "messages": [
+            {
+              "context": {
+                "from": "15556450833",
+                "id": "wamid.HBgLNzkyMjYzNjAwMjMVAgARGBJFNzgyRjU3MTIzMUI4N0U3MkIA"
+              },
+              "from": "79226360023",
+              "id": "wamid.HBgLNzkyMjYzNjAwMjMVAgASGCBFNDE1MzZCRTg4REU2MTk5Mzc4MEE2NTUzQjI1Q0ZDNgA=",
+              "timestamp": "1747728959",
+              "type": "button",
+              "button": {
+                "payload": "Call Human",
+                "text": "Call Human"
+              }
+            }
+          ]
+        },
+        "field": "messages"
+      }
+    ]
+  }
+]

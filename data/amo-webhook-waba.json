@@ -1,0 +1,33 @@
+// amo webhook from waba
+{
+  "account": {
+    "subdomain": "nataca7799",
+    "id": "34639287",
+    "_links": {
+      "self": "https://nataca7799.amocrm.com"
+    }
+  },
+  "message": {
+    "add": [
+      {
+        "id": "dec5d667-994d-4b8c-aefd-389b04341a39",
+        "chat_id": "414a88a0-607b-43b9-bc24-bf4556832598",
+        "talk_id": "100",
+        "contact_id": "3918132",
+        "text": "Y",
+        "created_at": "1747984842",
+        "element_type": "2",
+        "entity_type": "lead",
+        "element_id": "1573100",
+        "entity_id": "1573100",
+        "type": "incoming",
+        "author": {
+          "id": "4d7f9e1a-5c72-40a8-9951-20f9ddef1b7e",
+          "type": "external",
+          "name": "Max"
+        },
+        "origin": "waba"
+      }
+    ]
+  }
+}
