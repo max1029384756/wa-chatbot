@@ -28,7 +28,7 @@ export class AiService {
   constructor(
     private readonly context: UserContextService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   // private readonly openai = new OpenAI({
   //   apiKey: process.env.OPENAI_API_KEY,
@@ -135,7 +135,14 @@ If the user already seems satisfied or gives a yes/no confirmation, do not offer
 
 If you don’t have enough context, ask for clarification first before answering. This clarification rule does not apply to jobs, vacancies, hiring, careers, employment, or working at Good Story.
 
-Answer ONLY with information from the sources below and relevant to the Good Story company, do not generate answers that don't use the sources. If there isn't enough information in the sources, first try to clarify or rephrase the user's question to better understand their request. For example, ask: "Could you please clarify what you mean by [topic]?" or "Can you provide more details about [subject]?" Do this up to three times.
+Answer ONLY with information from the sources below and relevant to the Good Story company, do not generate answers that don't use the sources. 
+Never invent, guess, infer, construct, or modify email addresses, phone numbers, WhatsApp numbers, URLs, addresses, prices, or other contact details.
+
+Use contact information only when it is explicitly written in the provided SOURCES.
+
+If the requested contact information is not present in the SOURCES, say that you don't have that information.
+
+If there isn't enough information in the sources, first try to clarify or rephrase the user's question to better understand their request. For example, ask: "Could you please clarify what you mean by [topic]?" or "Can you provide more details about [subject]?" Do this up to three times.
 If after three clarifications you still cannot answer, say: "Sorry, I don't have that information after clarifying. ${this.getSupportContactInfo()}".
 If the user question is not in English, answer in the language used in the question.
 
@@ -183,7 +190,41 @@ SOURCES:
 
       // Retriever to search for the documents in the database
       const retriever = store.asRetriever(3);
-      const context = await retriever.invoke(userInput);
+
+      const historyMessages = await chatHistory.getMessages();
+
+      let retrievalQuery = userInput;
+
+      if (historyMessages.length > 0) {
+        const rewritePrompt = ChatPromptTemplate.fromMessages([
+          [
+            'system',
+            `Rewrite the user's latest message into a standalone search query for a RAG knowledge base.
+
+Use the conversation history to understand short follow-up messages like:
+"yes", "how much?", "where?", "tell me more", "what about it?"
+
+Do not answer the user.
+Do not invent any new facts.
+Return only the rewritten search query.`,
+          ],
+          ['placeholder', '{chat_history}'],
+          ['human', '{input}'],
+        ]);
+
+        const rewritten = await rewritePrompt.pipe(this.model).invoke({
+          chat_history: historyMessages,
+          input: userInput,
+        });
+
+        if (typeof rewritten.content === 'string') {
+          retrievalQuery = rewritten.content;
+        }
+      }
+
+      this.logger.debug(`RAG retrieval query: ${retrievalQuery}`);
+
+      const context = await retriever.invoke(retrievalQuery);
 
       // const similaritySearchWithScoreResults = await store.similaritySearchWithScore(userInput, 3);
 
