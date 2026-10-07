@@ -8,11 +8,14 @@ import { MessageHistoryService } from '@/modules/message-history/message-history
 import { InstagramObject } from '@/modules/instagram/interfaces/instagram.object.interface';
 import { PROVIDERS } from '@/modules/message-history/providers.constants';
 import { DeveloperAlertService } from '@/modules/developer-alert/developer-alert.service';
+import { INSTAGRAM_MANAGED_ACCOUNTS } from './instagram-managed-accounts';
 
 @Injectable()
 export class InstagramService implements IWebhookHandler {
   private readonly logger = new Logger(InstagramService.name);
   private static readonly HEART_RESPONSE = '\u2764\uFE0F';
+  private static readonly LOOP_NOTICE =
+    'Служебное уведомление: ваше сообщение игнорируется, чтобы избежать автоматических ответов самому себе или между нашими аккаунтами. При необходимости обратитесь к разработчику.';
   private static readonly EMOJI_CHARACTER_REGEX = /[\u203C-\u3299\u{1F000}-\u{1FAFF}]/u;
 
   constructor(
@@ -38,16 +41,12 @@ export class InstagramService implements IWebhookHandler {
       return;
     }
 
-    // TODO: for message field "is_echo": true; message.is_echo
-    if (instagramUserId === sender.id) {
-      this.logger.debug('Received message from the same user ID, ignoring message');
+    const guard = await this.checkLoopGuard(instagramUserId, sender.id, recipient.id, message);
+    if (guard === 'skip') return;
+    if (guard === 'notice') {
+      await this.sendInstagramMessage(instagramUserId, recipient.id, sender.id, InstagramService.LOOP_NOTICE);
       return;
     }
-    // сообщение от 6plwlugheam4 и отправитель я мой макскор акк
-    // if (instagramUserId !== '17841475555245128' && sender.id !== '1089141306401636') {
-    //   this.logger.debug('Not me inst message, ignoring message');
-    //   return;
-    // }
 
     // Respond with a heart when the payload looks like a story/reel reaction or an emoji-only nudge.
     if (this.shouldSkipRagAndSendHeart(message)) {
@@ -78,11 +77,16 @@ export class InstagramService implements IWebhookHandler {
 
   public async handleTestWebhook(payload: InstagramObject): Promise<any> {
     this.logger.debug('Received Instagram webhook', payload);
+    const instagramUserId = payload.entry?.[0]?.id;
     const { sender, recipient, message, timestamp } = payload.entry?.[0]?.messaging?.[0] ?? {};
 
     if (!sender?.id || !recipient?.id || !message?.text) {
       return undefined;
     }
+
+    const guard = await this.checkLoopGuard(instagramUserId, sender.id, recipient.id, message);
+    if (guard === 'skip') return undefined;
+    if (guard === 'notice') return InstagramService.LOOP_NOTICE;
 
     if (this.shouldSkipRagAndSendHeart(message)) {
       return InstagramService.HEART_RESPONSE;
@@ -115,12 +119,82 @@ export class InstagramService implements IWebhookHandler {
     //   this.logger.warn('No Instagram accessTokens found in config');
     //   return undefined;
     // }
-    const token = accessTokens[instagramUserId];
+    const token = accessTokens?.[instagramUserId];
     // if (!token) {
     //   this.logger.warn(`No Instagram access token found for instagramUserId: ${instagramUserId}`);
     //   return undefined;
     // }
+
     return token;
+  }
+
+  private async checkLoopGuard(
+    instagramUserId: string,
+    senderId: string,
+    recipientId: string,
+    message: { text?: string; is_echo?: boolean },
+  ): Promise<'skip' | 'notice' | 'allow'> {
+    // Echoes are outgoing events, not new requests from a manager.
+    // The exact notice is a terminal message, even with a different recipient-side mid.
+    if (message.is_echo === true || instagramUserId === senderId || message.text === InstagramService.LOOP_NOTICE) {
+      this.logger.debug('Instagram loop guard: echo, own event or service notice skipped');
+      return 'skip';
+    }
+
+    const accounts = {
+      ...INSTAGRAM_MANAGED_ACCOUNTS,
+      ...this.configService.get<Record<string, string>>('services.instagram.managedAccounts'),
+    };
+    const accessTokens = this.configService.get<Record<string, string>>('services.instagram.accessTokens') ?? {};
+    if (senderId === recipientId || senderId in accounts || senderId in accessTokens) {
+      this.logger.debug('Instagram loop guard: managed account blocked');
+      return 'notice';
+    }
+
+    // A recipient-side sender.id is scoped; it cannot be compared directly with
+    // the professional account IDs above. Resolve its username with this inbox's token.
+    const accessToken = this.getInstagramAccessTokenByUserId(instagramUserId);
+    if (!accessToken) {
+      this.logger.warn('Instagram loop guard: no token for sender identity check; skipping');
+      return 'skip';
+    }
+
+    try {
+      const response = await lastValueFrom(this.httpService.get(
+        `https://graph.instagram.com/v23.0/${senderId}`,
+        {
+          params: { fields: 'username' },
+          headers: { Authorization: `Bearer ${accessToken}` },
+          timeout: 10000,
+        },
+      ));
+      const username = response.data?.username;
+      if (typeof username !== 'string' || !username.trim()) {
+        this.logger.warn('Instagram loop guard: missing sender username; skipping');
+        return 'skip';
+      }
+      const isManaged = Object.values(accounts).some(
+        (name) => name.toLowerCase() === username.toLowerCase(),
+      );
+      if (isManaged) this.logger.debug('Instagram loop guard: managed scoped sender blocked');
+
+      return isManaged ? 'notice' : 'allow';
+    } catch (error: any) {
+      // Never fall through to AI if the sender could be one of our bots.
+      // Do not log Axios errors here: they can contain Authorization headers.
+      const statusCode = error?.response?.status;
+      if (statusCode === 401 || error?.response?.data?.error?.code === 190) {
+        await this.developerAlertService.notifyInstagramAuthFailure({
+          instagramUserId,
+          igId: recipientId,
+          userId: senderId,
+          statusCode,
+          errorPayload: error?.response?.data,
+        });
+      }
+      this.logger.warn('Instagram loop guard: sender profile lookup failed; skipping');
+      return 'skip';
+    }
   }
 
   private shouldSkipRagAndSendHeart(message: any): boolean {

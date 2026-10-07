@@ -27,6 +27,7 @@ export interface User {
 // Интерфейс для содержимого сообщения
 export interface MessageContent {
   mid: string;
+  is_echo?: boolean;
   text?: string;
   reply_to?: {
     story?: {

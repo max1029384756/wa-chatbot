@@ -1,3 +1,5 @@
+import { INSTAGRAM_MANAGED_ACCOUNTS } from '../modules/instagram/instagram-managed-accounts';
+
 const env = (key: string): string => process.env[`AMO__${key}`] || '';
 
 export default {
@@ -112,6 +114,9 @@ export default {
     highWater: env('AMOAPI_LIMITER_HIGHWATER') || 1000,
   },
   services: {
+    instagram: {
+      managedAccounts: INSTAGRAM_MANAGED_ACCOUNTS,
+    },
     developerAlert: {
       telegram: {
         chatId: process.env.DEVELOPER_ALERT_TELEGRAM_CHAT_ID || '',

@@ -37,8 +37,10 @@ describe('InstagramService', () => {
 
   beforeEach(() => {
     aiService = { generateAIResponse: jest.fn() };
-    configService = { get: jest.fn() };
-    httpService = { post: jest.fn() };
+    configService = { get: jest.fn((key: string) => key === 'services.instagram.accessTokens' ? { 'entry-id': 'token' } : undefined) };
+    httpService = { post: jest.fn(), get: jest.fn() };
+    httpService.get.mockReturnValue(of({ data: { id: 'sender-id', username: 'customer' } }));
+    httpService.post.mockReturnValue(of({ data: { message_id: 'sent-mid' } }));
     messageHistoryService = { save: jest.fn() };
     developerAlertService = { notifyInstagramAuthFailure: jest.fn() };
 
@@ -53,6 +55,144 @@ describe('InstagramService', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('loop protection', () => {
+    it('ignores echo even when the sender ID differs from entry ID', async () => {
+      const payload = buildPayload({ message: { mid: 'echo', text: 'hello', is_echo: true } });
+
+      await service.handleWebhook(payload);
+
+      expect(aiService.generateAIResponse).not.toHaveBeenCalled();
+      expect(httpService.post).not.toHaveBeenCalled();
+      expect(httpService.get).not.toHaveBeenCalled();
+    });
+
+    it.each(['goodstoryvillage', 'goodstorysurf', 'goodstoryclub', '6plwlugheam4'])(
+      'sends a notice instead of AI for scoped sender belonging to %s', async (username) => {
+        httpService.get.mockReturnValue(of({ data: { id: 'sender-id', username } }));
+
+        await service.handleWebhook(buildPayload({}));
+
+        expect(aiService.generateAIResponse).not.toHaveBeenCalled();
+        expect(messageHistoryService.save).not.toHaveBeenCalled();
+        expect(httpService.post).toHaveBeenCalledTimes(1);
+        expect(httpService.post.mock.calls[0][1].message.text).toContain('разработчику');
+      },
+    );
+
+    it('does not answer the notice received by the other account, including after restart', async () => {
+      httpService.get.mockReturnValue(of({ data: { id: 'sender-id', username: 'goodstorysurf' } }));
+      await service.handleWebhook(buildPayload({}));
+      const notice = httpService.post.mock.calls[0][1].message.text;
+      const restarted = new InstagramService(aiService, configService, httpService, messageHistoryService, developerAlertService);
+      httpService.post.mockClear();
+
+      await restarted.handleWebhook(buildPayload({ message: { mid: 'new-scoped-mid', text: notice } }));
+
+      expect(httpService.post).not.toHaveBeenCalled();
+      expect(aiService.generateAIResponse).not.toHaveBeenCalled();
+    });
+
+    it('skips AI if sender identity cannot be checked', async () => {
+      httpService.get.mockReturnValue(throwError(() => new Error('profile unavailable')));
+
+      await service.handleWebhook(buildPayload({}));
+
+      expect(aiService.generateAIResponse).not.toHaveBeenCalled();
+      expect(httpService.post).not.toHaveBeenCalled();
+    });
+
+    it.each([{ status: 401, code: 0 }, { status: 400, code: 190 }])(
+      'preserves developer authentication alerts on profile failure %j', async ({ status, code }) => {
+        const errorPayload = { error: { code, message: 'Expired token' } };
+        httpService.get.mockReturnValue(throwError(() => ({ response: { status, data: errorPayload } })));
+
+        await service.handleWebhook(buildPayload({}));
+
+        expect(developerAlertService.notifyInstagramAuthFailure).toHaveBeenCalledWith({
+          instagramUserId: 'entry-id', igId: 'recipient-id', userId: 'sender-id',
+          statusCode: status, errorPayload,
+        });
+        expect(aiService.generateAIResponse).not.toHaveBeenCalled();
+        expect(httpService.post).not.toHaveBeenCalled();
+      },
+    );
+
+    it('keeps normal customer responses', async () => {
+      aiService.generateAIResponse.mockResolvedValue('customer answer');
+
+      await service.handleWebhook(buildPayload({}));
+
+      expect(aiService.generateAIResponse).toHaveBeenCalledTimes(1);
+      expect(httpService.post.mock.calls[0][1].message.text).toBe('customer answer');
+    });
+
+    it('sends a notice for a non-echo self-message', async () => {
+      await service.handleWebhook(buildPayload({ sender: { id: 'recipient-id' } }));
+
+      expect(aiService.generateAIResponse).not.toHaveBeenCalled();
+      expect(httpService.post).toHaveBeenCalledTimes(1);
+    });
+
+    it('retains the existing own-account event check when is_echo is absent', async () => {
+      await service.handleWebhook(buildPayload({ sender: { id: 'entry-id' } }));
+
+      expect(aiService.generateAIResponse).not.toHaveBeenCalled();
+      expect(httpService.post).not.toHaveBeenCalled();
+      expect(httpService.get).not.toHaveBeenCalled();
+    });
+
+    it('blocks a managed ID even without an active token for that sender', async () => {
+      await service.handleWebhook(buildPayload({ sender: { id: '17841473653760876' } }));
+
+      expect(aiService.generateAIResponse).not.toHaveBeenCalled();
+      expect(httpService.post).toHaveBeenCalledTimes(1);
+      expect(httpService.get).not.toHaveBeenCalled();
+    });
+
+    it('blocks a managed story reaction before sending a heart', async () => {
+      httpService.get.mockReturnValue(of({ data: { id: 'sender-id', username: 'GoodStorySurf' } }));
+
+      await service.handleWebhook(buildPayload({ message: { mid: 'reaction', text: '❤️', reply_to: { story: { id: 'story' } } } }));
+
+      expect(httpService.post.mock.calls[0][1].message.text).toContain('разработчику');
+      expect(aiService.generateAIResponse).not.toHaveBeenCalled();
+      expect(httpService.get).toHaveBeenCalledWith('https://graph.instagram.com/v23.0/sender-id', {
+        params: { fields: 'username' },
+        headers: { Authorization: 'Bearer token' },
+        timeout: 10000,
+      });
+    });
+
+    it('does not process unknown identity if the inbox token is missing', async () => {
+      configService.get.mockReturnValue(undefined);
+
+      await service.handleWebhook(buildPayload({}));
+
+      expect(aiService.generateAIResponse).not.toHaveBeenCalled();
+      expect(httpService.post).not.toHaveBeenCalled();
+      expect(httpService.get).not.toHaveBeenCalled();
+    });
+
+    it.each([{}, { username: '' }, { username: 123 }])('skips malformed profile %j', async (data) => {
+      httpService.get.mockReturnValue(of({ data }));
+
+      await service.handleWebhook(buildPayload({}));
+
+      expect(aiService.generateAIResponse).not.toHaveBeenCalled();
+      expect(httpService.post).not.toHaveBeenCalled();
+    });
+
+    it('applies the same guard to the test handler', async () => {
+      httpService.get.mockReturnValue(of({ data: { id: 'sender-id', username: 'goodstoryclub' } }));
+
+      const response = await service.handleTestWebhook(buildPayload({}));
+
+      expect(response).toContain('разработчику');
+      expect(aiService.generateAIResponse).not.toHaveBeenCalled();
+      expect(httpService.post).not.toHaveBeenCalled();
+    });
   });
 
   describe('handleTestWebhook', () => {
