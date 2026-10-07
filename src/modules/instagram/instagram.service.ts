@@ -8,7 +8,7 @@ import { MessageHistoryService } from '@/modules/message-history/message-history
 import { InstagramObject } from '@/modules/instagram/interfaces/instagram.object.interface';
 import { PROVIDERS } from '@/modules/message-history/providers.constants';
 import { DeveloperAlertService } from '@/modules/developer-alert/developer-alert.service';
-import { INSTAGRAM_MANAGED_ACCOUNTS } from './instagram-managed-accounts';
+import { INSTAGRAM_MANAGED_ACCOUNTS_DIAGNOSTIC, normalizeInstagramManagedAccounts } from './instagram-managed-accounts';
 
 @Injectable()
 export class InstagramService implements IWebhookHandler {
@@ -27,7 +27,7 @@ export class InstagramService implements IWebhookHandler {
   ) {}
 
   async handleWebhook(payload: any): Promise<any> {
-    this.logger.debug('Received Instagram webhook', payload);
+    this.logger.debug('Received Instagram webhook');
     // Call aiService or other logic as needed
     // return { status: 'received', source: 'instagram' };
 
@@ -76,7 +76,7 @@ export class InstagramService implements IWebhookHandler {
   }
 
   public async handleTestWebhook(payload: InstagramObject): Promise<any> {
-    this.logger.debug('Received Instagram webhook', payload);
+    this.logger.debug('Received Instagram webhook');
     const instagramUserId = payload.entry?.[0]?.id;
     const { sender, recipient, message, timestamp } = payload.entry?.[0]?.messaging?.[0] ?? {};
 
@@ -141,12 +141,14 @@ export class InstagramService implements IWebhookHandler {
       return 'skip';
     }
 
-    const accounts = {
-      ...INSTAGRAM_MANAGED_ACCOUNTS,
-      ...this.configService.get<Record<string, string>>('services.instagram.managedAccounts'),
-    };
-    const accessTokens = this.configService.get<Record<string, string>>('services.instagram.accessTokens') ?? {};
-    if (senderId === recipientId || senderId in accounts || senderId in accessTokens) {
+    const accounts = normalizeInstagramManagedAccounts(
+      this.configService.get<unknown>('services.instagram.managedAccounts'),
+    );
+    if (!accounts) {
+      this.logger.warn(INSTAGRAM_MANAGED_ACCOUNTS_DIAGNOSTIC);
+      return 'skip';
+    }
+    if (senderId === recipientId || Object.prototype.hasOwnProperty.call(accounts, senderId)) {
       this.logger.debug('Instagram loop guard: managed account blocked');
       return 'notice';
     }
@@ -174,7 +176,7 @@ export class InstagramService implements IWebhookHandler {
         return 'skip';
       }
       const isManaged = Object.values(accounts).some(
-        (name) => name.toLowerCase() === username.toLowerCase(),
+        (name) => name === username.trim().toLowerCase(),
       );
       if (isManaged) this.logger.debug('Instagram loop guard: managed scoped sender blocked');
 
@@ -235,7 +237,7 @@ export class InstagramService implements IWebhookHandler {
   ): Promise<void> {
     const accessToken = this.getInstagramAccessTokenByUserId(instagramUserId);
     if (!accessToken) {
-      this.logger.error(`No access token found for instagramUserId: ${instagramUserId}`);
+      this.logger.error('No Instagram access token found; message not sent');
       return;
     }
 
@@ -249,10 +251,10 @@ export class InstagramService implements IWebhookHandler {
       },
     };
 
-    this.logger.debug({ url, body });
+    this.logger.debug('Sending Instagram message');
 
     try {
-      const response = await lastValueFrom(
+      await lastValueFrom(
         this.httpService.post(url, body, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -261,7 +263,7 @@ export class InstagramService implements IWebhookHandler {
         }),
       );
 
-      this.logger.debug({ response: response.data });
+      this.logger.debug('Instagram message sent');
     } catch (error: any) {
       const statusCode = error?.response?.status;
 
@@ -275,7 +277,7 @@ export class InstagramService implements IWebhookHandler {
         });
       }
 
-      this.logger.error('Error sending inst message:', error);
+      this.logger.error('Error sending Instagram message', { statusCode });
     }
   }
 }

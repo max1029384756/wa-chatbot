@@ -7,6 +7,7 @@ import { MessageHistoryService } from '@/modules/message-history/message-history
 import { InstagramObject } from '@/modules/instagram/interfaces/instagram.object.interface';
 import { PROVIDERS } from '@/modules/message-history/providers.constants';
 import { of, throwError } from 'rxjs';
+import { Logger } from '@nestjs/common';
 
 describe('InstagramService', () => {
   let service: InstagramService;
@@ -37,7 +38,14 @@ describe('InstagramService', () => {
 
   beforeEach(() => {
     aiService = { generateAIResponse: jest.fn() };
-    configService = { get: jest.fn((key: string) => key === 'services.instagram.accessTokens' ? { 'entry-id': 'token' } : undefined) };
+    configService = { get: jest.fn((key: string) => {
+      if (key === 'services.instagram.accessTokens') return { 'entry-id': 'token' };
+      if (key === 'services.instagram.managedAccounts') return {
+        '900000001': 'sample_lodge', '900000002': 'sample_waves',
+        '900000003': 'sample_club', '900000004': 'sample_test',
+      };
+      return undefined;
+    }) };
     httpService = { post: jest.fn(), get: jest.fn() };
     httpService.get.mockReturnValue(of({ data: { id: 'sender-id', username: 'customer' } }));
     httpService.post.mockReturnValue(of({ data: { message_id: 'sent-mid' } }));
@@ -58,6 +66,38 @@ describe('InstagramService', () => {
   });
 
   describe('loop protection', () => {
+    it.each([undefined, {}, [], null, { abc: 'sample' }, { '900000001': '' }, { '900000001': '  ' }, { '900000001': 123 }])(
+      'disables all automatic replies for invalid configuration %j', async (accounts) => {
+        configService.get.mockImplementation((key: string) => key === 'services.instagram.managedAccounts' ? accounts : { 'entry-id': 'token' });
+        const warning = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+
+        try {
+          await service.handleWebhook(buildPayload({ sender: { id: 'recipient-id' } }));
+          await service.handleWebhook(buildPayload({}));
+          await service.handleTestWebhook(buildPayload({ message: { mid: 'reaction', text: '❤️' } }));
+
+          expect(aiService.generateAIResponse).not.toHaveBeenCalled();
+          expect(messageHistoryService.save).not.toHaveBeenCalled();
+          expect(httpService.post).not.toHaveBeenCalled();
+          expect(httpService.get).not.toHaveBeenCalled();
+          expect(warning).toHaveBeenCalledWith(expect.stringContaining('INSTAGRAM_MANAGED_ACCOUNTS'));
+        } finally {
+          warning.mockRestore();
+        }
+      },
+    );
+
+    it('normalizes configured usernames and profile usernames', async () => {
+      configService.get.mockImplementation((key: string) => key === 'services.instagram.managedAccounts'
+        ? { '900000002': '  SAMPLE_WAVES  ' } : { 'entry-id': 'token' });
+      httpService.get.mockReturnValue(of({ data: { username: ' sample_waves ' } }));
+
+      await service.handleWebhook(buildPayload({}));
+
+      expect(aiService.generateAIResponse).not.toHaveBeenCalled();
+      expect(httpService.post.mock.calls[0][1].message.text).toContain('разработчику');
+    });
+
     it('ignores echo even when the sender ID differs from entry ID', async () => {
       const payload = buildPayload({ message: { mid: 'echo', text: 'hello', is_echo: true } });
 
@@ -68,7 +108,7 @@ describe('InstagramService', () => {
       expect(httpService.get).not.toHaveBeenCalled();
     });
 
-    it.each(['goodstoryvillage', 'goodstorysurf', 'goodstoryclub', '6plwlugheam4'])(
+    it.each(['sample_lodge', 'sample_waves', 'sample_club', 'sample_test'])(
       'sends a notice instead of AI for scoped sender belonging to %s', async (username) => {
         httpService.get.mockReturnValue(of({ data: { id: 'sender-id', username } }));
 
@@ -82,7 +122,7 @@ describe('InstagramService', () => {
     );
 
     it('does not answer the notice received by the other account, including after restart', async () => {
-      httpService.get.mockReturnValue(of({ data: { id: 'sender-id', username: 'goodstorysurf' } }));
+      httpService.get.mockReturnValue(of({ data: { id: 'sender-id', username: 'sample_waves' } }));
       await service.handleWebhook(buildPayload({}));
       const notice = httpService.post.mock.calls[0][1].message.text;
       const restarted = new InstagramService(aiService, configService, httpService, messageHistoryService, developerAlertService);
@@ -144,7 +184,7 @@ describe('InstagramService', () => {
     });
 
     it('blocks a managed ID even without an active token for that sender', async () => {
-      await service.handleWebhook(buildPayload({ sender: { id: '17841473653760876' } }));
+      await service.handleWebhook(buildPayload({ sender: { id: '900000003' } }));
 
       expect(aiService.generateAIResponse).not.toHaveBeenCalled();
       expect(httpService.post).toHaveBeenCalledTimes(1);
@@ -152,7 +192,7 @@ describe('InstagramService', () => {
     });
 
     it('blocks a managed story reaction before sending a heart', async () => {
-      httpService.get.mockReturnValue(of({ data: { id: 'sender-id', username: 'GoodStorySurf' } }));
+      httpService.get.mockReturnValue(of({ data: { id: 'sender-id', username: 'Sample_Waves' } }));
 
       await service.handleWebhook(buildPayload({ message: { mid: 'reaction', text: '❤️', reply_to: { story: { id: 'story' } } } }));
 
@@ -166,7 +206,8 @@ describe('InstagramService', () => {
     });
 
     it('does not process unknown identity if the inbox token is missing', async () => {
-      configService.get.mockReturnValue(undefined);
+      configService.get.mockImplementation((key: string) => key === 'services.instagram.managedAccounts'
+        ? { '900000001': 'sample_lodge' } : undefined);
 
       await service.handleWebhook(buildPayload({}));
 
@@ -185,7 +226,7 @@ describe('InstagramService', () => {
     });
 
     it('applies the same guard to the test handler', async () => {
-      httpService.get.mockReturnValue(of({ data: { id: 'sender-id', username: 'goodstoryclub' } }));
+      httpService.get.mockReturnValue(of({ data: { id: 'sender-id', username: 'sample_club' } }));
 
       const response = await service.handleTestWebhook(buildPayload({}));
 
